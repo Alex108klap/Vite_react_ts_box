@@ -1,0 +1,17 @@
+{
+  "include": ["src", "declarations.d.ts"],
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
+  "compilerOptions": {
+"preserveSymlinks": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "jsx": "react"
+  }
+  
+}
