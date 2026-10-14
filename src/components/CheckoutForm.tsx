@@ -1,9 +1,10 @@
-import React, {useState} from 'react';
-import {useCart} from 'src/context/CartContext';
-import type {CartItem} from 'src/context/CartContext';
+import React, { useState } from 'react';
+import { useCart } from 'src/context/CartContext';
+import type { CartItem } from 'src/context/CartContext';
+import emailjs from '@emailjs/browser';
 
 export const CheckoutForm: React.FC = () => {
-  const {items, getTotalPrice, clearCart} = useCart();
+  const { items, getTotalPrice, clearCart } = useCart();
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -63,51 +64,44 @@ export const CheckoutForm: React.FC = () => {
       .map((item: CartItem) => `• ${item.name} x ${item.quantity} шт. (${item.price * item.quantity} $)`)
       .join('\n');
     
-    // 4. ТЕКСТ ДЛЯ TELEGRAM
-    const messageText = `
-🛍 *НОВЫЙ ЗАКАЗ НА САЙТЕ!*
-
-👤 *Покупатель:* ${name || 'Не указано'}
-📞 *Телефон:* ${phone}
-📍 *Адрес/Почта:* ${trimmedAddress || 'Не указан'}
-💳 *Способ оплаты:* ${paymentMethod === 'card' ? 'Карта' : paymentMethod === 'cash' ? 'Наличные' : 'СБП'}
-
-📦 *Товары в заказе:*
-${itemsList}
-
-💰 *Итого к оплате:* ${getTotalPrice()} $
-    `.trim();
+    // 4. ПОДГОТОВКА ДАННЫХ ДЛЯ ШАБЛОНА EMAILJS
+    const templateParams = {
+      to_name: "Администратор магазина",
+      user_name: name || 'Не указано',
+      user_phone: phone,
+      user_address: trimmedAddress || 'Не указан',
+      payment_method: paymentMethod === 'card' ? 'Карта' : paymentMethod === 'cash' ? 'Наличные' : 'СБП',
+      items_list: itemsList,
+      total_price: `${getTotalPrice()} $`
+    };
     
-    // 5. НАДЕЖНАЯ ОТПРАВКА НА НАШ ЛОКАЛЬНЫЙ СЕРВЕР (ПРОКСИ)
-    fetch('http://localhost:5000/api/order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: messageText })
-    })
-      .then(response => {
-        if (response.ok) {
-          alert(`🎉 Спасибо за заказ, ${name || 'Покупатель'}!\nДанные успешно отправлены. Наш менеджер свяжется с вами.`);
-          
-          // Очистка формы и корзины после успешной отправки
-          setName('');
-          setPhone('');
-          setAddress('');
-          clearCart();
-        } else {
-          alert('Произошла ошибка при отправке заказа на сервер бэкенда.');
-        }
+    // 5. БЕЗОПАСНАЯ ОТПРАВКА ЧЕРЕЗ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ VITE
+    emailjs.send(
+      import.meta.env.VITE_EMAILJS_SERVICE_ID,
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+      templateParams,
+      import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+    )
+      .then((result) => {
+        alert(`🎉 Спасибо за заказ, ${name || 'Покупатель'}!\nУведомление успешно отправлено на вашу почту.`);
+        
+        // Очистка полей и корзины
+        setName('');
+        setPhone('');
+        setAddress('');
+        clearCart();
       })
-      .catch(error => {
-        console.error('Ошибка сети:', error);
-        alert('Не удалось связаться с локальным сервером заказов. Проверьте, запущен ли файл server.js.');
+      .catch((error) => {
+        console.error('Ошибка отправки EmailJS:', error);
+        alert('Не удалось отправить заказ через интернет. Убедитесь, что переменные окружения заполнены на Vercel.');
       });
   };
+  
   return (
     <div style={styles.checkoutContainer}>
       <h2 style={styles.title}>📋 Оформление заказа</h2>
       
       <form onSubmit={handleSubmit} style={styles.form}>
-        {/* Поле: Имя */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Ваше имя</label>
           <input
@@ -119,7 +113,6 @@ ${itemsList}
           />
         </div>
         
-        {/* Поле: Телефон */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Номер телефона *</label>
           <input
@@ -132,7 +125,6 @@ ${itemsList}
           />
         </div>
         
-        {/* Поле: Адрес или Email */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Адрес доставки или Email</label>
           <input
@@ -144,7 +136,6 @@ ${itemsList}
           />
         </div>
         
-        {/* Поле: Способ оплаты */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Способ оплаты</label>
           <select
@@ -158,11 +149,9 @@ ${itemsList}
           </select>
         </div>
         
-        {/* Инфо-панель стоимости */}
         <div style={styles.summaryBox}>
           <span>Товаров в заказе: <strong>{items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0)} шт.</strong></span>
-          <span>К оплате: <strong
-            style={{color: '#1e7e34'}}>{getTotalPrice()} \$</strong></span>
+          <span>К оплате: <strong style={{color: '#1e7e34'}}>{getTotalPrice()} \$</strong></span>
         </div>
         
         <button type="submit" style={styles.submitButton}>
@@ -205,6 +194,8 @@ const styles = {
     outline: 'none',
     backgroundColor: '#ffffff',
     color: '#1a202c',
+    width: '100%',
+    boxSizing: 'border-box' as const,
     transition: 'all 0.15s ease-in-out'
   },
   select: {
@@ -216,6 +207,8 @@ const styles = {
     color: '#1a202c',
     backgroundColor: '#ffffff',
     cursor: 'pointer',
+    width: '100%',
+    boxSizing: 'border-box' as const,
     transition: 'all 0.15s ease-in-out'
   },
   summaryBox: {
