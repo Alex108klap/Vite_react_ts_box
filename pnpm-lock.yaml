@@ -11,6 +11,9 @@ importers:
       '@chakra-ui/react':
         specifier: ^3.34.0
         version: 3.36.0(@emotion/react@11.14.0(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@emailjs/browser':
+        specifier: ^5.0.3
+        version: 5.0.3
       '@emotion/react':
         specifier: ^11.14.0
         version: 11.14.0(@types/react@19.2.17)(react@19.2.7)(supports-color@8.1.1)
@@ -322,6 +325,10 @@ packages:
 
   '@clack/prompts@1.0.1':
     resolution: {integrity: sha512-/42G73JkuYdyWZ6m8d/CJtBrGl1Hegyc7Fy78m5Ob+jF85TOUmLR5XLce/U3LxYAw0kJ8CT5aI99RIvPHcGp/Q==}
+
+  '@emailjs/browser@5.0.3':
+    resolution: {integrity: sha512-4HGAkWdzql7mrG34ZFFj7IDJNRgtbl1+yVgHdQJ6XSfhq9gxGUHtttr4UKNi7Fk++1hMXRHy1lTeGZrkioOtsw==}
+    engines: {node: '>=14.0.0'}
 
   '@emotion/babel-plugin@11.13.5':
     resolution: {integrity: sha512-pxHCpT2ex+0q+HH91/zsdHkw/lXd468DIN2zvfvLtPKLLMo6gQj7oLObq8PhkrxOZb/gGCq03S3Z7PDhS8pduQ==}
@@ -3321,6 +3328,8 @@ snapshots:
       '@clack/core': 1.0.1
       picocolors: 1.1.1
       sisteransi: 1.0.5
+
+  '@emailjs/browser@5.0.3': {}
 
   '@emotion/babel-plugin@11.13.5(supports-color@8.1.1)':
     dependencies:
