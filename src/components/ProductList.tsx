@@ -3,15 +3,11 @@ import { sanityClient } from 'src/sanityClient';
 import type { Product } from 'src/context/CartContext';
 import { ProductCard } from './ProductCard';
 
-// Расширяем базовый интерфейс Product, адаптируя типы под структуру данных Sanity
+// Адаптируем типы под новую структуру данных Sanity, где image — готовая строка-URL
 interface SanityProduct extends Omit<Product, 'id' | 'image'> {
-  _id: string; // В Sanity уникальный ID хранится в поле _id
+  _id: string;
   category: 'all' | 'audio' | 'peripherals' | 'gadgets';
-  image?: {
-    asset?: {
-      _ref?: string;
-    };
-  };
+  image: string; // Из GROQ-запроса возвращается чистая строка
 }
 
 const CATEGORIES = [
@@ -22,15 +18,16 @@ const CATEGORIES = [
 ] as const;
 
 export const ProductList: React.FC = () => {
-  // Состояния для динамических товаров из CMS и индикатора загрузки
   const [products, setProducts] = useState<SanityProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false); // Для безопасной гидратации React
   
   const [activeCategory, setActiveCategory] = useState<'all' | 'audio' | 'peripherals' | 'gadgets'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Запрос данных из Sanity Studio при монтировании витрины
   useEffect(() => {
+    setIsMounted(true); // Флаг того, что клиентский компонент успешно смонтирован
+    
     sanityClient
       .fetch(`*[_type == "product"] {
       _id,
@@ -41,7 +38,7 @@ export const ProductList: React.FC = () => {
       "image": image.asset->url
     }`)
       .then((data: SanityProduct[]) => {
-        setProducts(data); // Вот тут мы используем setProducts, ошибки ESLint уйдут!
+        setProducts(data);
         setLoading(false);
       })
       .catch((err) => {
@@ -50,20 +47,15 @@ export const ProductList: React.FC = () => {
       });
   }, []);
   
-  // Комплексный пайплайн фильтрации динамических данных
   const filteredProducts = products.filter((product) => {
     const matchesCategory = activeCategory === 'all' || product.category === activeCategory;
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
   
-  // Экран ожидания ответа от сервера
-  if (loading) {
-    return (
-      <div style={styles.loadingBox}>
-        🔄 Синхронизация с базой данных ТЕХНО-МАРКЕТ...
-      </div>
-    );
+  // Защита от Hydration Mismatch: не рендерим динамический контент до полного монтирования в браузере
+  if (!isMounted) {
+    return <div style={styles.loadingBox}>🔄 Инициализация витрины...</div>;
   }
   
   return (
@@ -89,7 +81,7 @@ export const ProductList: React.FC = () => {
               key={cat.id}
               onClick={() => {
                 setActiveCategory(cat.id);
-                setSearchQuery(''); // Полностью сбрасывает текст в инпуте
+                setSearchQuery('');
               }}
               style={{
                 ...styles.filterButton,
@@ -105,8 +97,12 @@ export const ProductList: React.FC = () => {
         })}
       </div>
       
-      {/* Обработка ситуации, когда ничего не найдено */}
-      {filteredProducts.length === 0 ? (
+      {/* Обработка индикатора загрузки и пустых результатов */}
+      {loading ? (
+        <div style={styles.loadingBox}>
+          🔄 Синхронизация с базой данных ТЕХНО-МАРКЕТ...
+        </div>
+      ) : filteredProducts.length === 0 ? (
         <div style={styles.notFound}>
           😢 К сожалению, ничего не найдено по запросу «{searchQuery}»
         </div>
@@ -114,12 +110,11 @@ export const ProductList: React.FC = () => {
         /* Адаптивная сетка товаров */
         <div style={styles.grid}>
           {filteredProducts.map((product) => {
-            // Форматируем данные под интерфейс обычной карточки ProductCard
             const standardProduct: Product = {
               id: product._id,
               name: product.name,
               price: product.price,
-              image: product.image, // Динамически генерируем URL картинки из Sanity
+              image: product.image || 'placeholder.png', // Безопасно подставляем строку-ссылку
             };
             return <ProductCard key={product._id} product={standardProduct} />;
           })}
@@ -150,6 +145,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'center',
     marginBottom: '24px',
+    width: '100%',
   },
   searchInput: {
     width: '100%',
