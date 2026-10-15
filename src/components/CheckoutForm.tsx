@@ -6,10 +6,21 @@ import { send } from '@emailjs/browser';
 export const CheckoutForm: React.FC = () => {
   const { items, getTotalPrice, clearCart } = useCart();
   
+  // Реальные сохраненные значения для отправки на почту
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
+  
+  // Состояния фокуса (активности) для каждого поля
+  const [isNameActive, setIsNameActive] = useState(false);
+  const [isPhoneActive, setIsPhoneActive] = useState(false);
+  const [isAddressActive, setIsAddressActive] = useState(false);
+  
+  // Высококонтрастные тексты подсказок
+  const namePlaceholder = "Иван Иванов";
+  const phonePlaceholder = "+7 (999) 123-45-67";
+  const addressPlaceholder = "г. Москва, ул. Ленина, д. 10, кв. 5";
   
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/\D/g, '');
@@ -32,10 +43,6 @@ export const CheckoutForm: React.FC = () => {
     return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
   };
   
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPhone(formatPhoneNumber(e.target.value));
-  };
-  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) {
@@ -47,7 +54,6 @@ export const CheckoutForm: React.FC = () => {
       return;
     }
     
-    // ИСПРАВЛЕНО ДЛЯ ПОЧТЫ: Формируем максимально чёткий список товаров без лишних спецсимволов
     const itemsList = items
       .map((item: CartItem) => `${item.name} -- ${item.quantity} шт. (${item.price * item.quantity} $)`)
       .join('\n');
@@ -79,66 +85,72 @@ export const CheckoutForm: React.FC = () => {
     <div style={styles.checkoutContainer}>
       <h2 style={styles.title}>📋 Быстрое оформление</h2>
       
-      {/* autoComplete="off" запрещает Chrome перекрашивать поля в серый цвет */}
+      {/* autoComplete="off" намертво закрывает серые автозаполнения Chrome */}
       <form onSubmit={handleSubmit} style={styles.form} autoComplete="off">
         
-        {/* Инъекция глобального CSS-хака против автозаполнения Chrome */}
-        <style>{`
-          input:-webkit-autofill,
-          input:-webkit-autofill:hover,
-          input:-webkit-autofill:focus,
-          input:-webkit-autofill:active {
-            -webkit-box-shadow: 0 0 0 30px white inset !important;
-            -webkit-text-fill-color: #111111 !important;
-            font-weight: bold !important;
-          }
-          input::placeholder {
-            color: #718096 !important;
-            font-weight: normal !important;
-          }
-        `}</style>
-        
         <div style={styles.row}>
+          {/* Поле: Имя */}
           <div style={styles.inputGroupFlex}>
             <label style={styles.label}>Ваше имя</label>
             <input
               type="text"
               required
               autoComplete="new-password"
-              placeholder="Иван Иванов"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={styles.input}
+              value={isNameActive || name ? name : namePlaceholder}
+              onChange={(e) => { if (isNameActive) setName(e.target.value); }}
+              onFocus={() => setIsNameActive(true)}
+              onBlur={() => setIsNameActive(false)}
+              style={{
+                ...styles.input,
+                color: isNameActive || name ? '#111111' : '#2d3748', // Насыщенный угольный цвет для подсказки
+                fontWeight: 'bold', // ВСЕГДА ЖИРНЫЙ ТЕКСТ
+                borderColor: isNameActive ? '#764ba2' : '#2d3748'
+              }}
             />
           </div>
           
+          {/* Поле: Телефон */}
           <div style={styles.inputGroupFlex}>
             <label style={styles.label}>Номер телефона *</label>
             <input
               type="tel"
               required
               autoComplete="new-password"
-              placeholder="+7 (999) 123-45-67"
-              value={phone}
-              onChange={handlePhoneChange}
-              style={styles.input}
+              value={isPhoneActive || phone ? phone : phonePlaceholder}
+              onChange={(e) => { if (isPhoneActive) setPhone(formatPhoneNumber(e.target.value)); }}
+              onFocus={() => setIsPhoneActive(true)}
+              onBlur={() => setIsPhoneActive(false)}
+              style={{
+                ...styles.input,
+                color: isPhoneActive || phone ? '#111111' : '#2d3748',
+                fontWeight: 'bold',
+                borderColor: isPhoneActive ? '#764ba2' : '#2d3748'
+              }}
             />
           </div>
         </div>
         
+        {/* Поле: Адрес доставки */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Адрес доставки или Email</label>
           <input
             type="text"
             required
             autoComplete="new-password"
-            placeholder="г. Москва, ул. Ленина, д. 10, кв. 5"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            style={styles.input}
+            value={isAddressActive || address ? address : addressPlaceholder}
+            onChange={(e) => { if (isAddressActive) setAddress(e.target.value); }}
+            onFocus={() => setIsAddressActive(true)}
+            onBlur={() => setIsAddressActive(false)}
+            style={{
+              ...styles.input,
+              color: isAddressActive || address ? '#111111' : '#2d3748',
+              fontWeight: 'bold',
+              borderColor: isAddressActive ? '#764ba2' : '#2d3748'
+            }}
           />
         </div>
         
+        {/* Поле: Способ оплаты */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Способ оплаты</label>
           <select
@@ -216,21 +228,20 @@ const styles = {
   input: {
     padding: '12px 16px',
     borderRadius: '6px',
-    border: '2px solid #2d3748', // Сделали рамку еще темнее
-    fontSize: '15px', // Чуть увеличили шрифт для читаемости
-    fontWeight: 'bold', // ТЕКСТ ТЕПЕРЬ ПОЖИРНЕЕ
+    border: '2px solid',
+    fontSize: '15px',
     outline: 'none',
     backgroundColor: '#ffffff',
-    color: '#111111', // Абсолютно черный цвет текста
     boxSizing: 'border-box' as const,
     width: '100%',
+    transition: 'all 0.15s ease-in-out',
   },
   select: {
     padding: '12px 16px',
     borderRadius: '6px',
     border: '2px solid #2d3748',
     fontSize: '15px',
-    fontWeight: 'bold', // Списку выбора тоже добавили жирность
+    fontWeight: 'bold',
     outline: 'none',
     color: '#111111',
     backgroundColor: '#ffffff',
