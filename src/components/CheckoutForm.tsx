@@ -76,7 +76,7 @@ export const CheckoutForm: React.FC = () => {
     };
     
     // 5. НАДЁЖНАЯ ОТПРАВКА НАПРЯМУЮ С РАБОЧИМИ КЛЮЧАМИ
-    const serviceId = 'service_g6djhaa';
+    const serviceId = 'service_2xllynb';
     const templateId = 'template_h8ep357';
     const publicKey  = 'd_rtQOMq280z3viDP';
     
