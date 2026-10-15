@@ -11,141 +11,135 @@ export const CheckoutForm: React.FC = () => {
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   
+  // Кастомный перехватчик для ярких плейсхолдеров
+  const [isNameActive, setIsNameActive] = useState(false);
+  const [isPhoneActive, setIsPhoneActive] = useState(false);
+  const [isAddressActive, setIsAddressActive] = useState(false);
+  
+  const namePlaceholder = "Иван Иванов";
+  const phonePlaceholder = "+7 (999) 123-45-67";
+  const addressPlaceholder = "г. Москва, ул. Ленина, д. 10, кв. 5";
+  
+  const formatPhoneNumber = (value: string) => {
+    const phoneNumber = value.replace(/\D/g, '');
+    const phoneNumberLength = phoneNumber.length;
+    if (phoneNumberLength === 0) return '';
+    
+    const prefix = '+7';
+    let digits = phoneNumber;
+    
+    if (phoneNumber.startsWith('7') || phoneNumber.startsWith('8')) {
+      digits = phoneNumber.substring(1);
+    }
+    
+    if (phoneNumberLength <= 1 && (phoneNumber.startsWith('7') || phoneNumber.startsWith('8'))) {
+      return '+7 ';
+    }
+    if (digits.length <= 3) return `${prefix} (${digits}`;
+    if (digits.length <= 6) return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    if (digits.length <= 8) return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+  };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (items.length === 0) {
       alert('Ваша корзина пуста! Добавьте товары перед оформлением заказа.');
       return;
     }
-    
-    if (!phone.trim()) {
-      alert('Пожалуйста, введите ваш номер телефона.');
+    if (phone.length < 18) {
+      alert('Пожалуйста, введите корректный номер телефона целиком.');
       return;
     }
     
-    // 1. КОНТРОЛЬ НОМЕРА ТЕЛЕФОНА
-    const allowedChars = "0123456789 +-()";
-    for (let i = 0; i < phone.length; i++) {
-      if (!allowedChars.includes(phone[i])) {
-        alert('Номер телефона может содержать только цифры и знаки (+, -, пробелы, скобки). Буквы не допускаются!');
-        return;
-      }
-    }
-    
-    const digitsOnly = phone.replace(/\D/g, '');
-    if (digitsOnly.length < 9 || digitsOnly.length > 15) {
-      alert(`Пожалуйста, введите корректный номер телефона. Вы ввели ${digitsOnly.length} цифр, а должно быть от 9 до 15.`);
-      return;
-    }
-    
-    // 2. УМНЫЙ КОНТРОЛЬ АДРЕСА / EMAIL
-    const trimmedAddress = address.trim();
-    if (trimmedAddress) {
-      const sanitizedAddress = trimmedAddress.replace(/,/g, '.').toLowerCase();
-      const hasAt = sanitizedAddress.includes('@');
-      const commonDomains = ['.ua', '.com', '.ru', '.net', '.org', '.biz', '.info', '.me', '.edu', '.gov'];
-      const hasDomainEnding = commonDomains.some(domain => sanitizedAddress.endsWith(domain));
-      
-      if (hasAt || hasDomainEnding) {
-        const atIndex = sanitizedAddress.indexOf('@');
-        const lastDotIndex = sanitizedAddress.lastIndexOf('.');
-        const isCorrectEmail = hasAt && atIndex > 0 && lastDotIndex > atIndex + 1;
-        
-        if (!isCorrectEmail) {
-          alert('Похоже, вы ввели некорректный адрес электронной почты. Проверьте правильность написания и обязательно укажите символ @ (например, user@example.com).');
-          return;
-        }
-      }
-    }
-    
-    // 3. ФОРМИРОВАНИЕ СПИСКА ТОВАРОВ
-    const itemsList = items
-      .map((item: CartItem) => `• ${item.name} x ${item.quantity} шт. (${item.price * item.quantity} $)`)
-      .join('\n');
-    
-    // 4. ПОДГОТОВКА ДАННЫХ ДЛЯ ШАБЛОНА EMAILJS
     const templateParams = {
       to_name: "Администратор магазина",
       user_name: name || 'Не указано',
       user_phone: phone,
-      user_address: trimmedAddress || 'Не указан',
+      user_address: address || 'Не указан',
       payment_method: paymentMethod === 'card' ? 'Карта' : paymentMethod === 'cash' ? 'Наличные' : 'СБП',
-      items_list: itemsList,
+      items_list: items.map((item: CartItem) => `• ${item.name} x ${item.quantity} шт.`).join('\n'),
       total_price: `${getTotalPrice()} $`
     };
     
-    // 5. НАДЁЖНАЯ ОТПРАВКА НАПРЯМУЮ С РАБОЧИМИ КЛЮЧАМИ
-    const serviceId = 'service_2xllynb';
-    const templateId = 'template_h8ep357';
-    const publicKey  = 'd_rtQOMq280z3viDP';
-    
-    send(
-      serviceId,
-      templateId,
-      templateParams,
-      publicKey
-    )
-      
-      
-      
+    send('service_2xllynb', 'template_h8ep357', templateParams, 'd_rtQOMq280z3viDP')
       .then(() => {
         alert(`🎉 Спасибо за заказ, ${name || 'Покупатель'}!\nУведомление успешно отправлено на вашу почту.`);
-        
-        // Очистка полей и корзины
         setName('');
         setPhone('');
         setAddress('');
         clearCart();
       })
       .catch((error) => {
-        console.error('Ошибка отправки EmailJS:', error);
-        
-        // Показываем РЕАЛЬНЫЙ текст ошибки из интернета, а не нашу старую заглушку
-        const errorMessage = error?.text || error?.message || JSON.stringify(error);
-        alert(`❌ Ошибка EmailJS: ${errorMessage}`);
+        alert(`❌ Ошибка EmailJS: ${error?.text || error?.message || 'Неизвестная ошибка'}`);
       });
   };
   
   return (
     <div style={styles.checkoutContainer}>
-      <h2 style={styles.title}>📋 Оформление заказа</h2>
+      <h2 style={styles.title}>📋 Быстрое оформление</h2>
       
       <form onSubmit={handleSubmit} style={styles.form}>
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>Ваше имя</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Иван Иванов"
-            style={styles.input}
-          />
+        
+        {/* Контейнер-строка: объединяет Имя и Телефон для экономии места на ПК */}
+        <div style={styles.row}>
+          <div style={styles.inputGroupFlex}>
+            <label style={styles.label}>Ваше имя</label>
+            <input
+              type="text"
+              required
+              value={isNameActive || name ? name : namePlaceholder}
+              onChange={(e) => { if (isNameActive) setName(e.target.value); }}
+              onFocus={() => setIsNameActive(true)}
+              onBlur={() => setIsNameActive(false)}
+              style={{
+                ...styles.input,
+                color: isNameActive || name ? '#111111' : '#555555',
+                fontWeight: isNameActive || name ? 'normal' : 'bold',
+                borderColor: isNameActive ? '#764ba2' : '#4a5568'
+              }}
+            />
+          </div>
+          
+          <div style={styles.inputGroupFlex}>
+            <label style={styles.label}>Номер телефона *</label>
+            <input
+              type="tel"
+              required
+              value={isPhoneActive || phone ? phone : phonePlaceholder}
+              onChange={(e) => { if (isPhoneActive) setPhone(formatPhoneNumber(e.target.value)); }}
+              onFocus={() => setIsPhoneActive(true)}
+              onBlur={() => setIsPhoneActive(false)}
+              style={{
+                ...styles.input,
+                color: isPhoneActive || phone ? '#111111' : '#555555',
+                fontWeight: isPhoneActive || phone ? 'normal' : 'bold',
+                borderColor: isPhoneActive ? '#764ba2' : '#4a5568'
+              }}
+            />
+          </div>
         </div>
         
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>Номер телефона *</label>
-          <input
-            type="text"
-            required
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+380 123-45-67 или любой другой"
-            style={styles.input}
-          />
-        </div>
-        
+        {/* Поле: Адрес доставки */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Адрес доставки или Email</label>
           <input
             type="text"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Новая Почта №5, г. Киев или client@mail.com"
-            style={styles.input}
+            required
+            value={isAddressActive || address ? address : addressPlaceholder}
+            onChange={(e) => { if (isAddressActive) setAddress(e.target.value); }}
+            onFocus={() => setIsAddressActive(true)}
+            onBlur={() => setIsAddressActive(false)}
+            style={{
+              ...styles.input,
+              color: isAddressActive || address ? '#111111' : '#555555',
+              fontWeight: isAddressActive || address ? 'normal' : 'bold',
+              borderColor: isAddressActive ? '#764ba2' : '#4a5568'
+            }}
           />
         </div>
         
+        {/* Поле: Способ оплаты */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Способ оплаты</label>
           <select
@@ -159,13 +153,14 @@ export const CheckoutForm: React.FC = () => {
           </select>
         </div>
         
+        {/* Компактная плашка с ценой */}
         <div style={styles.summaryBox}>
-          <span>Товаров в заказе: <strong>{items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0)} шт.</strong></span>
-          <span>К оплате: <strong style={{color: '#1e7e34'}}>{getTotalPrice()} \$</strong></span>
+          <span>Всего: <strong>{items.reduce((sum, item) => sum + item.quantity, 0)} шт.</strong></span>
+          <span>К оплате: <strong style={{ color: '#1e7e34', fontSize: '18px' }}>{getTotalPrice()} \$</strong></span>
         </div>
         
         <button type="submit" style={styles.submitButton}>
-          Подтвердить и заказать
+          Подтвердить заказ
         </button>
       </form>
     </div>
@@ -175,74 +170,96 @@ export const CheckoutForm: React.FC = () => {
 const styles = {
   checkoutContainer: {
     backgroundColor: '#ffffff',
-    border: '2px solid #cbd5e0',
-    borderRadius: '12px',
-    padding: '24px',
-    marginTop: '30px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    border: '2px solid #2d3748', // Очень контрастная темная рамка блока
+    borderRadius: '10px',
+    padding: '16px 20px', // Уменьшили внутренние отступы для компактности
+    marginTop: '20px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
     fontFamily: 'Arial, sans-serif',
     width: '100%',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
   },
   title: {
-    fontSize: '22px',
-    margin: '0 0 20px 0',
-    color: '#1a202c',
+    fontSize: '18px', // Сделали заголовок чуть компактнее
+    margin: '0 0 14px 0',
+    color: '#111111',
     borderBottom: '3px solid #764ba2',
-    paddingBottom: '8px',
+    paddingBottom: '4px',
     display: 'inline-block',
-    fontWeight: 'bold' as const
+    fontWeight: 'bold' as const,
   },
-  form: {display: 'flex', flexDirection: 'column' as const, gap: '18px'},
-  inputGroup: {display: 'flex', flexDirection: 'column' as const, gap: '8px'},
-  label: {fontSize: '15px', fontWeight: 'bold' as const, color: '#2d3748'},
+  form: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '12px', // Уменьшили расстояние между элементами с 18px до 12px
+  },
+  row: {
+    display: 'flex',
+    gap: '16px',
+    flexWrap: 'wrap' as const, // Автоперенос на телефонах
+  },
+  inputGroup: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '4px',
+    width: '100%',
+  },
+  inputGroupFlex: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '4px',
+    flex: '1 1 200px', // Растягиваются в строку на ПК, падают вниз на мобильных
+  },
+  label: {
+    fontSize: '14px',
+    fontWeight: 'bold' as const,
+    color: '#111111', // Абсолютно черный, максимально читаемый текст меток
+  },
   input: {
-    padding: '12px 16px',
-    borderRadius: '8px',
-    border: '2px solid #a0aec0',
-    fontSize: '15px',
+    padding: '10px 14px', // Компактные поля ввода
+    borderRadius: '6px',
+    border: '2px solid', // Контрастная толстая рамка
+    fontSize: '14px',
     outline: 'none',
     backgroundColor: '#ffffff',
-    color: '#1a202c',
-    width: '100%',
     boxSizing: 'border-box' as const,
-    transition: 'all 0.15s ease-in-out'
+    width: '100%',
+    transition: 'border-color 0.15s ease-in-out',
   },
   select: {
-    padding: '12px 16px',
-    borderRadius: '8px',
-    border: '2px solid #a0aec0',
-    fontSize: '15px',
+    padding: '10px 14px',
+    borderRadius: '6px',
+    border: '2px solid #4a5568',
+    fontSize: '14px',
     outline: 'none',
-    color: '#1a202c',
+    color: '#111111',
     backgroundColor: '#ffffff',
     cursor: 'pointer',
-    width: '100%',
     boxSizing: 'border-box' as const,
-    transition: 'all 0.15s ease-in-out'
+    width: '100%',
   },
   summaryBox: {
     display: 'flex',
     justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: '#f7fafc',
-    padding: '14px',
-    borderRadius: '8px',
-    fontSize: '16px',
-    color: '#2d3748',
-    marginTop: '8px',
+    padding: '10px 14px', // Более сжатая плашка итогов
+    borderRadius: '6px',
+    fontSize: '15px',
+    color: '#111111',
+    marginTop: '4px',
     border: '2px dashed #cbd5e0',
-    fontWeight: '500' as const
+    fontWeight: 'bold' as const,
   },
   submitButton: {
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: '#ffffff',
     border: 'none',
-    padding: '16px 0',
-    borderRadius: '8px',
+    padding: '12px 0', // Уменьшили высоту кнопки
+    borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: 'bold' as const,
-    fontSize: '17px',
-    boxShadow: '0 4px 12px rgba(118, 75, 162, 0.3)',
-    transition: 'transform 0.1s ease'
+    fontSize: '16px',
+    boxShadow: '0 4px 10px rgba(118, 75, 162, 0.2)',
   },
 };
