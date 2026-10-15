@@ -12,29 +12,15 @@ export const CheckoutForm: React.FC = () => {
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   
-  const formatPhoneNumber = (value: string) => {
-    const phoneNumber = value.replace(/\D/g, '');
-    const phoneNumberLength = phoneNumber.length;
-    if (phoneNumberLength === 0) return '';
-    
-    const prefix = '+7';
-    let digits = phoneNumber;
-    
-    if (phoneNumber.startsWith('7') || phoneNumber.startsWith('8')) {
-      digits = phoneNumber.substring(1);
-    }
-    
-    if (phoneNumberLength <= 1 && (phoneNumber.startsWith('7') || phoneNumber.startsWith('8'))) {
-      return '+7 ';
-    }
-    if (digits.length <= 3) return `${prefix} (${digits}`;
-    if (digits.length <= 6) return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    if (digits.length <= 8) return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-    return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
-  };
-  
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPhone(formatPhoneNumber(e.target.value));
+    const value = e.target.value;
+    
+    // Разрешаем только цифры, плюс, минус, скобки и пробелы
+    const allowedChars = /^[0-9+\-() ]*$/;
+    
+    if (allowedChars.test(value)) {
+      setPhone(value);
+    }
   };
   
   const handleSubmit = (e: React.FormEvent) => {
