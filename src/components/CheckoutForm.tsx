@@ -15,7 +15,9 @@ export const CheckoutForm: React.FC = () => {
   // Чистый контроль ввода телефона: разрешаем только цифры и знаки (+, -, пробелы, скобки)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const allowedChars = /^[0-9+\-() ]*\$/;
+    
+    // ИСПРАВЛЕНО: Чистое регулярное выражение без ломающего знака $
+    const allowedChars = /^[0-9+\-() ]*$/;
     
     if (allowedChars.test(value)) {
       setPhone(value);
