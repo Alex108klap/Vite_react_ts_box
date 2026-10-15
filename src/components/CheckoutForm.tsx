@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useCart } from 'src/context/CartContext';
 import type { CartItem } from 'src/context/CartContext';
-import emailjs from '@emailjs/browser';
+import { send } from '@emailjs/browser';
 
 export const CheckoutForm: React.FC = () => {
   const { items, getTotalPrice, clearCart } = useCart();
@@ -75,14 +75,20 @@ export const CheckoutForm: React.FC = () => {
       total_price: `${getTotalPrice()} $`
     };
     
-    // 5. БЕЗОПАСНАЯ ОТПРАВКА ЧЕРЕЗ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ VITE
-    emailjs.send(
-      import.meta.env.VITE_EMAILJS_SERVICE_ID,
-      import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+    // 5. НАДЕЖНАЯ ОТПРАВКА С ГАРАНТИРОВАННЫМИ КЛЮЧАМИ
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_g6djhaa';
+    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_h8ep357';
+    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'd_rtQOMq280z3viDP';
+    
+    send(
+      serviceId,
+      templateId,
       templateParams,
-      import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+      publicKey
     )
-      .then((result) => {
+      
+      
+      .then(() => {
         alert(`🎉 Спасибо за заказ, ${name || 'Покупатель'}!\nУведомление успешно отправлено на вашу почту.`);
         
         // Очистка полей и корзины
