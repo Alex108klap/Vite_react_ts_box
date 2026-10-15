@@ -100,7 +100,10 @@ export const CheckoutForm: React.FC = () => {
       })
       .catch((error) => {
         console.error('Ошибка отправки EmailJS:', error);
-        alert('Не удалось отправить заказ через интернет. Убедитесь, что переменные окружения заполнены на Vercel.');
+        
+        // Показываем РЕАЛЬНЫЙ текст ошибки из интернета, а не нашу старую заглушку
+        const errorMessage = error?.text || error?.message || JSON.stringify(error);
+        alert(`❌ Ошибка EmailJS: ${errorMessage}`);
       });
   };
   
