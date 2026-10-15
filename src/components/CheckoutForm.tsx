@@ -6,17 +6,16 @@ import { send } from '@emailjs/browser';
 export const CheckoutForm: React.FC = () => {
   const { items, getTotalPrice, clearCart } = useCart();
   
-  // 1. ПОЛЯ ИЗНАЧАЛЬНО СТРОГО ПУСТЫЕ И ЧИСТЫЕ
+  // Поля изначально кристально пустые и чистые
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   
+  // Чистый контроль ввода телефона: разрешаем только цифры и знаки (+, -, пробелы, скобки)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    
-    // Разрешаем только цифры, плюс, минус, скобки и пробелы
-    const allowedChars = /^[0-9+\-() ]*$/;
+    const allowedChars = /^[0-9+\-() ]*\$/;
     
     if (allowedChars.test(value)) {
       setPhone(value);
@@ -29,11 +28,15 @@ export const CheckoutForm: React.FC = () => {
       alert('Ваша корзина пуста! Добавьте товары перед оформлением заказа.');
       return;
     }
-    if (phone.length < 18) {
-      alert('Пожалуйста, введите корректный номер телефона целиком.');
+    
+    // Валидация длины номера телефона (количество чистых цифр)
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (digitsOnly.length < 9 || digitsOnly.length > 15) {
+      alert(`Пожалуйста, введите корректный номер телефона. Вы ввели ${digitsOnly.length} цифр, а должно быть от 9 до 15.`);
       return;
     }
     
+    // Формирование красивого списка товаров для письма
     const itemsList = items
       .map((item: CartItem) => `${item.name} -- ${item.quantity} шт. (${item.price * item.quantity} $)`)
       .join('\n');
@@ -65,16 +68,30 @@ export const CheckoutForm: React.FC = () => {
     <div style={styles.checkoutContainer}>
       <h2 style={styles.title}>📋 Быстрое оформление</h2>
       
-      {/* 2. НАМЕРТВО БЛОКИРУЕМ ВСПЛЫВАЮЩИЕ ИСТОРИИ И ПОДСКАЗКИ EMAIL ОТ БРАУЗЕРА */}
+      {/* autoComplete="off" отключает навязчивые подсказки прошлых вводов */}
       <form onSubmit={handleSubmit} style={styles.form} autoComplete="off">
         
+        {/* 🔥 ГЛОБАЛЬНЫЙ ХАК: Перебиваем серую заливку автозаполнения Chrome */}
+        <style>{`
+          input:-webkit-autofill,
+          input:-webkit-autofill:hover,
+          input:-webkit-autofill:focus,
+          input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 50px white inset !important;
+            -webkit-text-fill-color: #111111 !important;
+            font-weight: bold !important;
+          }
+        `}</style>
+        
+        {/* Строка: Имя и Телефон */}
         <div style={styles.row}>
           <div style={styles.inputGroupFlex}>
             <label style={styles.label}>Ваше имя</label>
             <input
               type="text"
               required
-              autoComplete="new-password" // Обманщик автозаполнения для Chrome
+              autoComplete="new-password"
+              placeholder="Иван Иванов"
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={styles.input}
@@ -87,6 +104,7 @@ export const CheckoutForm: React.FC = () => {
               type="tel"
               required
               autoComplete="new-password"
+              placeholder="+380 123-45-67"
               value={phone}
               onChange={handlePhoneChange}
               style={styles.input}
@@ -94,18 +112,21 @@ export const CheckoutForm: React.FC = () => {
           </div>
         </div>
         
+        {/* Поле: Адрес доставки */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Адрес доставки или Email</label>
           <input
             type="text"
             required
-            autoComplete="new-password" // Защищает поле от выпадающего списка прошлых email
+            autoComplete="new-password"
+            placeholder="г. Киев, ул. Крещатик, д. 1 или client@mail.com"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             style={styles.input}
           />
         </div>
         
+        {/* Поле: Способ оплаты */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Способ оплаты</label>
           <select
@@ -119,6 +140,7 @@ export const CheckoutForm: React.FC = () => {
           </select>
         </div>
         
+        {/* Компактная плашка с ценой */}
         <div style={styles.summaryBox}>
           <span>Всего: <strong>{items.reduce((sum, item) => sum + item.quantity, 0)} шт.</strong></span>
           <span>К оплате: <strong style={{ color: '#1e7e34', fontSize: '18px' }}>{getTotalPrice()} \$</strong></span>
@@ -185,10 +207,10 @@ const styles = {
     borderRadius: '6px',
     border: '2px solid #2d3748',
     fontSize: '15px',
-    fontWeight: 'bold', // Вводимый текст будет красивым и жирным
+    fontWeight: 'bold' as const, // Весь текст теперь гарантированно жирный
     outline: 'none',
     backgroundColor: '#ffffff',
-    color: '#111111', // Текст глубокого черного цвета
+    color: '#111111', // Абсолютно чёрный текст
     boxSizing: 'border-box' as const,
     width: '100%',
     transition: 'all 0.15s ease-in-out',
@@ -198,7 +220,7 @@ const styles = {
     borderRadius: '6px',
     border: '2px solid #2d3748',
     fontSize: '15px',
-    fontWeight: 'bold',
+    fontWeight: 'bold' as const,
     outline: 'none',
     color: '#111111',
     backgroundColor: '#ffffff',
