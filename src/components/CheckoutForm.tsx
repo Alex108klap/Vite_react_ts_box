@@ -6,13 +6,11 @@ import { send } from '@emailjs/browser';
 export const CheckoutForm: React.FC = () => {
   const { items, getTotalPrice, clearCart } = useCart();
   
-  // Чистые начальные состояния — никаких скрытых подмен текста
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   
-  // Умная функция маски номера телефона, которая теперь работает идеально
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/\D/g, '');
     const phoneNumberLength = phoneNumber.length;
@@ -35,7 +33,6 @@ export const CheckoutForm: React.FC = () => {
   };
   
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Передаем в маску чистый ввод пользователя
     setPhone(formatPhoneNumber(e.target.value));
   };
   
@@ -50,13 +47,18 @@ export const CheckoutForm: React.FC = () => {
       return;
     }
     
+    // ИСПРАВЛЕНО ДЛЯ ПОЧТЫ: Формируем максимально чёткий список товаров без лишних спецсимволов
+    const itemsList = items
+      .map((item: CartItem) => `${item.name} -- ${item.quantity} шт. (${item.price * item.quantity} $)`)
+      .join('\n');
+    
     const templateParams = {
       to_name: "Администратор магазина",
-      user_name: name || 'Не указано',
+      user_name: name.trim() || 'Не указано',
       user_phone: phone,
-      user_address: address || 'Не указан',
+      user_address: address.trim() || 'Не указан',
       payment_method: paymentMethod === 'card' ? 'Карта' : paymentMethod === 'cash' ? 'Наличные' : 'СБП',
-      items_list: items.map((item: CartItem) => `• ${item.name} x ${item.quantity} шт.`).join('\n'),
+      items_list: itemsList,
       total_price: `${getTotalPrice()} $`
     };
     
@@ -77,15 +79,32 @@ export const CheckoutForm: React.FC = () => {
     <div style={styles.checkoutContainer}>
       <h2 style={styles.title}>📋 Быстрое оформление</h2>
       
-      <form onSubmit={handleSubmit} style={styles.form}>
+      {/* autoComplete="off" запрещает Chrome перекрашивать поля в серый цвет */}
+      <form onSubmit={handleSubmit} style={styles.form} autoComplete="off">
         
-        {/* Строка: Имя и Телефон */}
+        {/* Инъекция глобального CSS-хака против автозаполнения Chrome */}
+        <style>{`
+          input:-webkit-autofill,
+          input:-webkit-autofill:hover,
+          input:-webkit-autofill:focus,
+          input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+            -webkit-text-fill-color: #111111 !important;
+            font-weight: bold !important;
+          }
+          input::placeholder {
+            color: #718096 !important;
+            font-weight: normal !important;
+          }
+        `}</style>
+        
         <div style={styles.row}>
           <div style={styles.inputGroupFlex}>
             <label style={styles.label}>Ваше имя</label>
             <input
               type="text"
               required
+              autoComplete="new-password"
               placeholder="Иван Иванов"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -98,6 +117,7 @@ export const CheckoutForm: React.FC = () => {
             <input
               type="tel"
               required
+              autoComplete="new-password"
               placeholder="+7 (999) 123-45-67"
               value={phone}
               onChange={handlePhoneChange}
@@ -106,12 +126,12 @@ export const CheckoutForm: React.FC = () => {
           </div>
         </div>
         
-        {/* Поле: Адрес доставки */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Адрес доставки или Email</label>
           <input
             type="text"
             required
+            autoComplete="new-password"
             placeholder="г. Москва, ул. Ленина, д. 10, кв. 5"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -119,7 +139,6 @@ export const CheckoutForm: React.FC = () => {
           />
         </div>
         
-        {/* Поле: Способ оплаты */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Способ оплаты</label>
           <select
@@ -133,7 +152,6 @@ export const CheckoutForm: React.FC = () => {
           </select>
         </div>
         
-        {/* Компактная плашка с ценой */}
         <div style={styles.summaryBox}>
           <span>Всего: <strong>{items.reduce((sum, item) => sum + item.quantity, 0)} шт.</strong></span>
           <span>К оплате: <strong style={{ color: '#1e7e34', fontSize: '18px' }}>{getTotalPrice()} \$</strong></span>
@@ -196,21 +214,23 @@ const styles = {
     color: '#111111',
   },
   input: {
-    padding: '10px 14px',
+    padding: '12px 16px',
     borderRadius: '6px',
-    border: '2px solid #4a5568', // Четкая, контрастная рамка по умолчанию
-    fontSize: '14px',
+    border: '2px solid #2d3748', // Сделали рамку еще темнее
+    fontSize: '15px', // Чуть увеличили шрифт для читаемости
+    fontWeight: 'bold', // ТЕКСТ ТЕПЕРЬ ПОЖИРНЕЕ
     outline: 'none',
     backgroundColor: '#ffffff',
-    color: '#111111',
+    color: '#111111', // Абсолютно черный цвет текста
     boxSizing: 'border-box' as const,
     width: '100%',
   },
   select: {
-    padding: '10px 14px',
+    padding: '12px 16px',
     borderRadius: '6px',
-    border: '2px solid #4a5568',
-    fontSize: '14px',
+    border: '2px solid #2d3748',
+    fontSize: '15px',
+    fontWeight: 'bold', // Списку выбора тоже добавили жирность
     outline: 'none',
     color: '#111111',
     backgroundColor: '#ffffff',
@@ -235,7 +255,7 @@ const styles = {
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: '#ffffff',
     border: 'none',
-    padding: '12px 0',
+    padding: '14px 0',
     borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: 'bold' as const,
