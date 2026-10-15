@@ -6,20 +6,13 @@ import { send } from '@emailjs/browser';
 export const CheckoutForm: React.FC = () => {
   const { items, getTotalPrice, clearCart } = useCart();
   
+  // Чистые начальные состояния — никаких скрытых подмен текста
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   
-  // Кастомный перехватчик для ярких плейсхолдеров
-  const [isNameActive, setIsNameActive] = useState(false);
-  const [isPhoneActive, setIsPhoneActive] = useState(false);
-  const [isAddressActive, setIsAddressActive] = useState(false);
-  
-  const namePlaceholder = "Иван Иванов";
-  const phonePlaceholder = "+7 (999) 123-45-67";
-  const addressPlaceholder = "г. Москва, ул. Ленина, д. 10, кв. 5";
-  
+  // Умная функция маски номера телефона, которая теперь работает идеально
   const formatPhoneNumber = (value: string) => {
     const phoneNumber = value.replace(/\D/g, '');
     const phoneNumberLength = phoneNumber.length;
@@ -39,6 +32,11 @@ export const CheckoutForm: React.FC = () => {
     if (digits.length <= 6) return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3)}`;
     if (digits.length <= 8) return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
     return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+  };
+  
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Передаем в маску чистый ввод пользователя
+    setPhone(formatPhoneNumber(e.target.value));
   };
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -81,23 +79,17 @@ export const CheckoutForm: React.FC = () => {
       
       <form onSubmit={handleSubmit} style={styles.form}>
         
-        {/* Контейнер-строка: объединяет Имя и Телефон для экономии места на ПК */}
+        {/* Строка: Имя и Телефон */}
         <div style={styles.row}>
           <div style={styles.inputGroupFlex}>
             <label style={styles.label}>Ваше имя</label>
             <input
               type="text"
               required
-              value={isNameActive || name ? name : namePlaceholder}
-              onChange={(e) => { if (isNameActive) setName(e.target.value); }}
-              onFocus={() => setIsNameActive(true)}
-              onBlur={() => setIsNameActive(false)}
-              style={{
-                ...styles.input,
-                color: isNameActive || name ? '#111111' : '#555555',
-                fontWeight: isNameActive || name ? 'normal' : 'bold',
-                borderColor: isNameActive ? '#764ba2' : '#4a5568'
-              }}
+              placeholder="Иван Иванов"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={styles.input}
             />
           </div>
           
@@ -106,16 +98,10 @@ export const CheckoutForm: React.FC = () => {
             <input
               type="tel"
               required
-              value={isPhoneActive || phone ? phone : phonePlaceholder}
-              onChange={(e) => { if (isPhoneActive) setPhone(formatPhoneNumber(e.target.value)); }}
-              onFocus={() => setIsPhoneActive(true)}
-              onBlur={() => setIsPhoneActive(false)}
-              style={{
-                ...styles.input,
-                color: isPhoneActive || phone ? '#111111' : '#555555',
-                fontWeight: isPhoneActive || phone ? 'normal' : 'bold',
-                borderColor: isPhoneActive ? '#764ba2' : '#4a5568'
-              }}
+              placeholder="+7 (999) 123-45-67"
+              value={phone}
+              onChange={handlePhoneChange}
+              style={styles.input}
             />
           </div>
         </div>
@@ -126,16 +112,10 @@ export const CheckoutForm: React.FC = () => {
           <input
             type="text"
             required
-            value={isAddressActive || address ? address : addressPlaceholder}
-            onChange={(e) => { if (isAddressActive) setAddress(e.target.value); }}
-            onFocus={() => setIsAddressActive(true)}
-            onBlur={() => setIsAddressActive(false)}
-            style={{
-              ...styles.input,
-              color: isAddressActive || address ? '#111111' : '#555555',
-              fontWeight: isAddressActive || address ? 'normal' : 'bold',
-              borderColor: isAddressActive ? '#764ba2' : '#4a5568'
-            }}
+            placeholder="г. Москва, ул. Ленина, д. 10, кв. 5"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            style={styles.input}
           />
         </div>
         
@@ -170,9 +150,9 @@ export const CheckoutForm: React.FC = () => {
 const styles = {
   checkoutContainer: {
     backgroundColor: '#ffffff',
-    border: '2px solid #2d3748', // Очень контрастная темная рамка блока
+    border: '2px solid #2d3748',
     borderRadius: '10px',
-    padding: '16px 20px', // Уменьшили внутренние отступы для компактности
+    padding: '16px 20px',
     marginTop: '20px',
     boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
     fontFamily: 'Arial, sans-serif',
@@ -180,7 +160,7 @@ const styles = {
     boxSizing: 'border-box' as const,
   },
   title: {
-    fontSize: '18px', // Сделали заголовок чуть компактнее
+    fontSize: '18px',
     margin: '0 0 14px 0',
     color: '#111111',
     borderBottom: '3px solid #764ba2',
@@ -191,12 +171,12 @@ const styles = {
   form: {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '12px', // Уменьшили расстояние между элементами с 18px до 12px
+    gap: '12px',
   },
   row: {
     display: 'flex',
     gap: '16px',
-    flexWrap: 'wrap' as const, // Автоперенос на телефонах
+    flexWrap: 'wrap' as const,
   },
   inputGroup: {
     display: 'flex',
@@ -208,23 +188,23 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: '4px',
-    flex: '1 1 200px', // Растягиваются в строку на ПК, падают вниз на мобильных
+    flex: '1 1 200px',
   },
   label: {
     fontSize: '14px',
     fontWeight: 'bold' as const,
-    color: '#111111', // Абсолютно черный, максимально читаемый текст меток
+    color: '#111111',
   },
   input: {
-    padding: '10px 14px', // Компактные поля ввода
+    padding: '10px 14px',
     borderRadius: '6px',
-    border: '2px solid', // Контрастная толстая рамка
+    border: '2px solid #4a5568', // Четкая, контрастная рамка по умолчанию
     fontSize: '14px',
     outline: 'none',
     backgroundColor: '#ffffff',
+    color: '#111111',
     boxSizing: 'border-box' as const,
     width: '100%',
-    transition: 'border-color 0.15s ease-in-out',
   },
   select: {
     padding: '10px 14px',
@@ -243,7 +223,7 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#f7fafc',
-    padding: '10px 14px', // Более сжатая плашка итогов
+    padding: '10px 14px',
     borderRadius: '6px',
     fontSize: '15px',
     color: '#111111',
@@ -255,7 +235,7 @@ const styles = {
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: '#ffffff',
     border: 'none',
-    padding: '12px 0', // Уменьшили высоту кнопки
+    padding: '12px 0',
     borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: 'bold' as const,
