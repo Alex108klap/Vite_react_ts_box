@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { sanityClient } from 'src/sanityClient';
-import type { Product } from 'src/context/CartContext';
-import { ProductCard } from './ProductCard';
+import React, {useState, useEffect} from 'react';
+import {sanityClient} from 'src/sanityClient';
+import type {Product} from 'src/context/CartContext';
+import {ProductCard} from './ProductCard';
 
 // Адаптируем типы под новую структуру данных Sanity, где image — готовая строка-URL
 interface SanityProduct extends Omit<Product, 'id' | 'image'> {
@@ -11,10 +11,10 @@ interface SanityProduct extends Omit<Product, 'id' | 'image'> {
 }
 
 const CATEGORIES = [
-  { id: 'all', label: '📋 Все товары' },
-  { id: 'audio', label: '🎵 Аудио' },
-  { id: 'peripherals', label: '💻 Периферия' },
-  { id: 'gadgets', label: '⚙️ Гаджеты' },
+  {id: 'all', label: '📋 Все товары'},
+  {id: 'audio', label: '🎵 Аудио'},
+  {id: 'peripherals', label: '💻 Периферия'},
+  {id: 'gadgets', label: '⚙️ Гаджеты'},
 ] as const;
 
 export const ProductList: React.FC = () => {
@@ -50,82 +50,84 @@ export const ProductList: React.FC = () => {
       });
   }, []);
   
-  const filteredProducts = products.filter((product) => {
-    const matchesCategory = activeCategory === 'all' || product.category === activeCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-  
-  // Защита от Hydration Mismatch: не рендерим динамический контент до полного монтирования в браузере
-  if (!isMounted) {
-    return <div style={styles.loadingBox}>🔄 Инициализация витрины...</div>;
-  }
-  
-  return (
-    <div style={styles.container}>
-      
-      {/* Панель поиска */}
-      <div style={styles.searchContainer}>
-        <input
-          type="text"
-          placeholder="🔍 Поиск гаджетов по названию..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={styles.searchInput}
-        />
+  const matchesCategory = activeCategory === 'all' || (product as any).category?.slug?.current === activeCategory;
+  const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+  return matchesCategory && matchesSearch;
+}
+)
+;
+
+// Защита от Hydration Mismatch: не рендерим динамический контент до полного монтирования в браузере
+if (!isMounted) {
+  return <div style={styles.loadingBox}>🔄 Инициализация витрины...</div>;
+}
+
+return (
+  <div style={styles.container}>
+    
+    {/* Панель поиска */}
+    <div style={styles.searchContainer}>
+      <input
+        type="text"
+        placeholder="🔍 Поиск гаджетов по названию..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        style={styles.searchInput}
+      />
+    </div>
+    
+    {/* Панель категорий */}
+    <div style={styles.filterBar}>
+      {CATEGORIES.map((cat) => {
+        const isActive = activeCategory === cat.id;
+        return (
+          <button
+            key={cat.id}
+            onClick={() => {
+              setActiveCategory(cat.id);
+              setSearchQuery('');
+            }}
+            style={{
+              ...styles.filterButton,
+              backgroundColor: isActive ? '#667eea' : '#fff',
+              color: isActive ? '#fff' : '#555',
+              border: isActive ? '1px solid #667eea' : '1px solid #e1e4e8',
+              boxShadow: isActive ? '0 4px 10px rgba(102, 126, 234, 0.2)' : 'none',
+            }}
+          >
+            {cat.label}
+          </button>
+        );
+      })}
+    </div>
+    
+    {/* Обработка индикатора загрузки и пустых результатов */}
+    {loading ? (
+      <div style={styles.loadingBox}>
+        🔄 Синхронизация с базой данных ТЕХНО-МАРКЕТ...
       </div>
-      
-      {/* Панель категорий */}
-      <div style={styles.filterBar}>
-        {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setActiveCategory(cat.id);
-                setSearchQuery('');
-              }}
-              style={{
-                ...styles.filterButton,
-                backgroundColor: isActive ? '#667eea' : '#fff',
-                color: isActive ? '#fff' : '#555',
-                border: isActive ? '1px solid #667eea' : '1px solid #e1e4e8',
-                boxShadow: isActive ? '0 4px 10px rgba(102, 126, 234, 0.2)' : 'none',
-              }}
-            >
-              {cat.label}
-            </button>
-          );
+    ) : filteredProducts.length === 0 ? (
+      <div style={styles.notFound}>
+        😢 К сожалению, ничего не найдено по запросу «{searchQuery}»
+      </div>
+    ) : (
+      /* Адаптивная сетка товаров */
+      <div style={styles.grid}>
+        {filteredProducts.map((product) => {
+          const standardProduct: Product = {
+            id: product._id,
+            name: product.name,
+            price: product.price,
+            image: product.image || 'placeholder.png', // Безопасно подставляем строку-ссылку
+          };
+          return <ProductCard key={product._id} product={standardProduct}/>;
         })}
       </div>
-      
-      {/* Обработка индикатора загрузки и пустых результатов */}
-      {loading ? (
-        <div style={styles.loadingBox}>
-          🔄 Синхронизация с базой данных ТЕХНО-МАРКЕТ...
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div style={styles.notFound}>
-          😢 К сожалению, ничего не найдено по запросу «{searchQuery}»
-        </div>
-      ) : (
-        /* Адаптивная сетка товаров */
-        <div style={styles.grid}>
-          {filteredProducts.map((product) => {
-            const standardProduct: Product = {
-              id: product._id,
-              name: product.name,
-              price: product.price,
-              image: product.image || 'placeholder.png', // Безопасно подставляем строку-ссылку
-            };
-            return <ProductCard key={product._id} product={standardProduct} />;
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
+    )}
+  </div>
+);
+}
+;
 
 const styles = {
   container: {
