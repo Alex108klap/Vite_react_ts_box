@@ -14,15 +14,8 @@ export default defineType({
     defineField({
       name: 'category',
       title: 'Категория',
-      type: 'string',
-      options: {
-        list: [
-          { title: 'Все товары', value: 'all' },
-          { title: 'Аудио', value: 'audio' },
-          { title: 'Периферия', value: 'peripherals' },
-          { title: 'Гаджеты', value: 'gadgets' },
-        ],
-      },
+      type: 'reference', // 👈 Изменили со string на динамическую связь (reference)
+      to: [{ type: 'category' }], // 👈 Указали жесткую связь со схемой категорий в единственном числе
     }),
     defineField({
       name: 'price',
