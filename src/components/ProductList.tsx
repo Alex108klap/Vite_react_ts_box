@@ -30,13 +30,16 @@ export const ProductList: React.FC = () => {
     
     sanityClient
       .fetch(`*[_type == "product"] {
-      _id,
-      name,
-      price,
-      description,
-      category,
-      "image": image.asset->url
-    }`)
+    _id,
+    name,
+    price,
+    description,
+    category-> {
+      title,
+      slug { current }
+    },
+    "image": image.asset->url
+  }`)
       .then((data: SanityProduct[]) => {
         setProducts(data);
         setLoading(false);
