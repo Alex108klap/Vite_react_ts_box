@@ -34,30 +34,24 @@ export const ProductList: React.FC = () => {
     setIsMounted(true);
     
     //  НАДО СДЕЛАТЬ СТРОГО ТАК:
-    sanityClient.fetch(
-      `*[_type == "product"] {
-    _id,
-    name,
-    price,
-    description,
-    category-> {
-      title,
-      slug { current }
-    },
-     "image": image.asset->url
-  }`,
-      {},
-      { useCdn: false }
-    )
-      .then((data: any[]) => {
-        setProducts(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Ошибка при загрузке товаров:", err);
-        setLoading(false);
-      });
-  }, []);
+    useEffect(() => {
+      setIsMounted(true);
+      
+      // ВРЕМЕННЫЙ ТЕСТ: Скачиваем все категории из базы данных Sanity
+      sanityClient
+        .fetch(`*[_type == "category"] {
+        title,
+        slug { current }
+      }`, {}, { useCdn: false })
+        .then((data: any[]) => {
+          console.log('=== СПИСОК ВСЕХ КАТЕГОРИЙ ИЗ БАЗЫ: ===', data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Ошибка теста:", err);
+          setLoading(false);
+        });
+    }, []);
   
   // Формируем отфильтрованный массив товаров на основе выбранной вкладки и поиска
   const filteredProducts = products.filter((product) => {
