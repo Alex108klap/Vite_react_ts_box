@@ -20,7 +20,7 @@ export default defineType({
           { title: 'Все товары', value: 'all' },
           { title: 'Аудио', value: 'audio' },
           { title: 'Периферия', value: 'peripherals' },
-          { title: 'Питание', value: 'power' },
+          { title: 'Гаджеты', value: 'power' },
         ],
       },
     }),
