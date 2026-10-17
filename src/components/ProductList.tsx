@@ -33,18 +33,22 @@ export const ProductList: React.FC = () => {
   useEffect(() => {
     setIsMounted(true);
     
-    sanityClient
-      .fetch(`*[_type == "product"] {
-        _id,
-        name,
-        price,
-        description,
-        category-> {
-          title,
-          slug { current }
-        },
-        "image": image.asset->url
-      }`)
+    //  НАДО СДЕЛАТЬ СТРОГО ТАК:
+    sanityClient.fetch(
+      `*[_type == "product"] {
+    _id,
+    name,
+    price,
+    description,
+    category-> {
+      title,
+      slug { current }
+    },
+     "image": image.asset->url
+  }`,
+      {},
+      { useCdn: false }
+    )
       .then((data: any[]) => {
         setProducts(data);
         setLoading(false);
