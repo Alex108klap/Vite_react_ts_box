@@ -57,7 +57,7 @@ export const ProductList: React.FC = () => {
   
   // Формируем отфильтрованный массив товаров на основе выбранной вкладки и поиска
   const filteredProducts = products.filter((product) => {
-    console.log('Кнопка на сайте:', activeCategory, '|| Из Sanity прилетело:', product.category?.slug?.current);
+    console.log('Полный объект товара из Sanity:', product);
     
     const matchesCategory =
       activeCategory === 'all' ||
