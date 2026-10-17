@@ -33,26 +33,36 @@ export const ProductList: React.FC = () => {
   useEffect(() => {
     setIsMounted(true);
     
-    //  НАДО СДЕЛАТЬ СТРОГО ТАК:
-    useEffect(() => {
-      setIsMounted(true);
-      
-      // ВРЕМЕННЫЙ ТЕСТ: Скачиваем все категории из базы данных Sanity
-      sanityClient
-        .fetch(`*[_type == "category"] {
-        title,
-        slug { current }
+    // 1. Сначала скачиваем товары (как и должно быть)
+    sanityClient
+      .fetch(`*[_type == "product"] {
+        _id,
+        name,
+        price,
+        description,
+        category-> {
+          title,
+          slug { current }
+        },
+        "image": image.asset->url
       }`, {}, { useCdn: false })
-        .then((data: any[]) => {
-          console.log('=== СПИСОК ВСЕХ КАТЕГОРИЙ ИЗ БАЗЫ: ===', data);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Ошибка теста:", err);
-          setLoading(false);
-        });
-    }, []);
-  
+      .then((data: any) => {
+        setProducts(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Ошибка загрузки товаров:", err);
+        setLoading(false);
+      });
+    
+    // 2. ОТДЕЛЬНЫЙ БЕЗОПАСНЫЙ ТЕСТ: Скачиваем категории параллельно без влияния на типы товаров
+    sanityClient
+      .fetch(`*[_type == "category"] { title, slug { current } }`, {}, { useCdn: false })
+      .then((catData: any) => {
+        console.log('=== СПИСОК ВСЕХ КАТЕГОРИЙ ИЗ БАЗЫ: ===', catData);
+      })
+      .catch((err) => console.error("Ошибка теста категорий:", err));
+  }, []);
   // Формируем отфильтрованный массив товаров на основе выбранной вкладки и поиска
   const filteredProducts = products.filter((product) => {
     console.log('Полный объект товара из Sanity:', product);
