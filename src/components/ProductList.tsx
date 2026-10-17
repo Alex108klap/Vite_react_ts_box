@@ -1,46 +1,51 @@
-import React, {useState, useEffect} from 'react';
-import {sanityClient} from 'src/sanityClient';
-import type {Product} from 'src/context/CartContext';
-import {ProductCard} from './ProductCard';
+import React, { useState, useEffect } from 'react';
+import { sanityClient } from 'src/sanityClient';
+import type { Product } from 'src/context/CartContext';
+import { ProductCard } from './ProductCard';
 
-// Адаптируем типы под новую структуру данных Sanity, где image — готовая строка-URL
+// Адаптируем типы под структуру данных Sanity v3
 interface SanityProduct extends Omit<Product, 'id' | 'image'> {
   _id: string;
-  category: 'all' | 'audio' | 'peripherals' | 'gadgets';
-  image: string; // Из GROQ-запроса возвращается чистая строка
+  category?: {
+    title: string;
+    slug?: {
+      current: string;
+    };
+  };
+  image: string;
 }
 
 const CATEGORIES = [
-  {id: 'all', label: '📋 Все товары'},
-  {id: 'audio', label: '🎵 Аудио'},
-  {id: 'peripherals', label: '💻 Периферия'},
-  {id: 'gadgets', label: '⚙️ Гаджеты'},
+  { id: 'all', label: '📋 Все товары' },
+  { id: 'audio', label: '🎵 Аудио' },
+  { id: 'peripherals', label: '💻 Периферия' },
+  { id: 'gadgets', label: '⚙️ Гаджеты' },
 ] as const;
 
 export const ProductList: React.FC = () => {
   const [products, setProducts] = useState<SanityProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false); // Для безопасной гидратации React
+  const [isMounted, setIsMounted] = useState(false); // 👈 УБЕДИТЕСЬ, ЧТО ТУТ НАПИСАНО ИМЕННО ТАК
   
   const [activeCategory, setActiveCategory] = useState<'all' | 'audio' | 'peripherals' | 'gadgets'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
-    setIsMounted(true); // Флаг того, что клиентский компонент успешно смонтирован
+    setIsMounted(true);
     
     sanityClient
       .fetch(`*[_type == "product"] {
-    _id,
-    name,
-    price,
-    description,
-    category-> {
-      title,
-      slug { current }
-    },
-    "image": image.asset->url
-  }`)
-      .then((data: SanityProduct[]) => {
+        _id,
+        name,
+        price,
+        description,
+        category-> {
+          title,
+          slug { current }
+        },
+        "image": image.asset->url
+      }`)
+      .then((data: any[]) => {
         setProducts(data);
         setLoading(false);
       })
@@ -50,84 +55,88 @@ export const ProductList: React.FC = () => {
       });
   }, []);
   
-  const matchesCategory = activeCategory === 'all' || (product as any).category?.slug?.current === activeCategory;
-  const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-  return matchesCategory && matchesSearch;
-}
-)
-;
-
-// Защита от Hydration Mismatch: не рендерим динамический контент до полного монтирования в браузере
-if (!isMounted) {
-  return <div style={styles.loadingBox}>🔄 Инициализация витрины...</div>;
-}
-
-return (
-  <div style={styles.container}>
+  // Формируем отфильтрованный массив товаров на основе выбранной вкладки и поиска
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory =
+      activeCategory === 'all' ||
+      product.category?.slug?.current === activeCategory;
     
-    {/* Панель поиска */}
-    <div style={styles.searchContainer}>
-      <input
-        type="text"
-        placeholder="🔍 Поиск гаджетов по названию..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        style={styles.searchInput}
-      />
-    </div>
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchQuery.toLowerCase());
     
-    {/* Панель категорий */}
-    <div style={styles.filterBar}>
-      {CATEGORIES.map((cat) => {
-        const isActive = activeCategory === cat.id;
-        return (
-          <button
-            key={cat.id}
-            onClick={() => {
-              setActiveCategory(cat.id);
-              setSearchQuery('');
-            }}
-            style={{
-              ...styles.filterButton,
-              backgroundColor: isActive ? '#667eea' : '#fff',
-              color: isActive ? '#fff' : '#555',
-              border: isActive ? '1px solid #667eea' : '1px solid #e1e4e8',
-              boxShadow: isActive ? '0 4px 10px rgba(102, 126, 234, 0.2)' : 'none',
-            }}
-          >
-            {cat.label}
-          </button>
-        );
-      })}
-    </div>
-    
-    {/* Обработка индикатора загрузки и пустых результатов */}
-    {loading ? (
-      <div style={styles.loadingBox}>
-        🔄 Синхронизация с базой данных ТЕХНО-МАРКЕТ...
+    return matchesCategory && matchesSearch;
+  });
+  
+  // Защита от Hydration Mismatch
+  if (!isMounted) {
+    return <div style={styles.loadingBox}>🔄 Инициализация витрины...</div>;
+  }
+  
+  return (
+    <div style={styles.container}>
+      
+      {/* Панель поиска */}
+      <div style={styles.searchContainer}>
+        <input
+          type="text"
+          placeholder="🔍 Поиск гаджетов по названию..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={styles.searchInput}
+        />
       </div>
-    ) : filteredProducts.length === 0 ? (
-      <div style={styles.notFound}>
-        😢 К сожалению, ничего не найдено по запросу «{searchQuery}»
-      </div>
-    ) : (
-      /* Адаптивная сетка товаров */
-      <div style={styles.grid}>
-        {filteredProducts.map((product) => {
-          const standardProduct: Product = {
-            id: product._id,
-            name: product.name,
-            price: product.price,
-            image: product.image || 'placeholder.png', // Безопасно подставляем строку-ссылку
-          };
-          return <ProductCard key={product._id} product={standardProduct}/>;
+      
+      {/* Панель категорий */}
+      <div style={styles.filterBar}>
+        {CATEGORIES.map((cat) => {
+          const isActive = activeCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => {
+                setActiveCategory(cat.id);
+                setSearchQuery('');
+              }}
+              style={{
+                ...styles.filterButton,
+                backgroundColor: isActive ? '#667eea' : '#fff',
+                color: isActive ? '#fff' : '#555',
+                border: isActive ? '1px solid #667eea' : '1px solid #e1e4e8',
+                boxShadow: isActive ? '0 4px 10px rgba(102, 126, 234, 0.2)' : 'none',
+              }}
+            >
+              {cat.label}
+            </button>
+          );
         })}
       </div>
-    )}
-  </div>
-);
-}
-;
+      
+      {/* Обработка индикатора загрузки и пустых результатов */}
+      {loading ? (
+        <div style={styles.loadingBox}>
+          🔄 Синхронизация с базой данных ТЕХНО-МАРКЕТ...
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div style={styles.notFound}>
+          😢 К сожалению, ничего не найдено по запросу «{searchQuery}»
+        </div>
+      ) : (
+        /* Адаптивная сетка товаров */
+        <div style={styles.grid}>
+          {filteredProducts.map((product) => {
+            const standardProduct: Product = {
+              id: product._id,
+              name: product.name,
+              price: product.price,
+              image: product.image || 'placeholder.png',
+            };
+            return <ProductCard key={product._id} product={standardProduct} />;
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const styles = {
   container: {
