@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { sanityClient } from 'src/sanityClient';
-import type { Product } from 'src/context/CartContext';
-import { ProductCard } from './ProductCard';
+import React, {useState, useEffect} from 'react';
+import {sanityClient} from 'src/sanityClient';
+import type {Product} from 'src/context/CartContext';
+import {ProductCard} from './ProductCard';
 
 // Адаптируем типы под структуру данных Sanity v3
 interface SanityProduct extends Omit<Product, 'id' | 'image'> {
@@ -16,10 +16,11 @@ interface SanityProduct extends Omit<Product, 'id' | 'image'> {
 }
 
 const CATEGORIES = [
-  { id: 'all', label: '📋 Все товары' },
-  { id: 'audio', label: '🎵 Аудио' },
-  { id: 'peripherals', label: '💻 Периферия' },
-  { id: 'gadgets', label: '⚙️ Гаджеты' },
+  {id: 'all', label: '📋 Все товары'},
+  {id: 'audio', label: '🎵 Аудио'},
+  {id: 'peripherals', label: '💻 Периферия'},
+  {id: 'gadgets', label: '⚙️ Гаджеты'},
+  {id: 'games', label: '🕹️ Игры'}, // 👈 ПРОСТО ДОПИШИТЕ ЭТУ СТРОКУ ЧЕРЕЗ ЗАПЯТУЮ!
 ] as const;
 
 export const ProductList: React.FC = () => {
@@ -27,7 +28,7 @@ export const ProductList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false); // 👈 УБЕДИТЕСЬ, ЧТО ТУТ НАПИСАНО ИМЕННО ТАК
   
-  const [activeCategory, setActiveCategory] = useState<'all' | 'audio' | 'peripherals' | 'gadgets'>('all');
+  const [activeCategory, setActiveCategory] = useState<'all' | 'audio' | 'peripherals' | 'gadgets' | 'games'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
@@ -45,7 +46,7 @@ export const ProductList: React.FC = () => {
           slug { current }
         },
         "image": image.asset->url
-      }`, {}, { useCdn: false })
+      }`, {}, {useCdn: false})
       .then((data: any) => {
         setProducts(data);
         setLoading(false);
@@ -57,7 +58,7 @@ export const ProductList: React.FC = () => {
     
     // 2. ОТДЕЛЬНЫЙ БЕЗОПАСНЫЙ ТЕСТ: Скачиваем категории параллельно без влияния на типы товаров
     sanityClient
-      .fetch(`*[_type == "category"] { title, slug { current } }`, {}, { useCdn: false })
+      .fetch(`*[_type == "category"] { title, slug { current } }`, {}, {useCdn: false})
       .then((catData: any) => {
         console.log('=== СПИСОК ВСЕХ КАТЕГОРИЙ ИЗ БАЗЫ: ===', catData);
       })
@@ -140,7 +141,7 @@ export const ProductList: React.FC = () => {
               price: product.price,
               image: product.image || 'placeholder.png',
             };
-            return <ProductCard key={product._id} product={standardProduct} />;
+            return <ProductCard key={product._id} product={standardProduct}/>;
           })}
         </div>
       )}
