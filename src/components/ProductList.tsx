@@ -15,13 +15,13 @@ interface SanityProduct extends Omit<Product, 'id' | 'image'> {
   image: string;
 }
 
-const CATEGORIES = [
+const CATEGORIES : any[] = [
   {id: 'all', label: '📋 Все товары'},
   {id: 'audio', label: '🎵 Аудио'},
   {id: 'peripherals', label: '💻 Периферия'},
   {id: 'gadgets', label: '⚙️ Гаджеты'},
   {id: 'games', label: '🕹️ Игры'}, // 👈 ПРОСТО ДОПИШИТЕ ЭТУ СТРОКУ ЧЕРЕЗ ЗАПЯТУЮ!
-] as const;
+];
 
 export const ProductList: React.FC = () => {
   const [products, setProducts] = useState<SanityProduct[]>([]);
@@ -100,7 +100,7 @@ export const ProductList: React.FC = () => {
       {/* Панель категорий */}
       <div style={styles.filterBar}>
         {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === cat.id;
+          const isActive = activeCategory === (cat as any).id;
           return (
             <button
               key={cat.id}
