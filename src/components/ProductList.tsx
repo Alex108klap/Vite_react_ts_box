@@ -1,7 +1,7 @@
-import React, {useState, useEffect} from 'react';
-import {sanityClient} from 'src/sanityClient';
-import type {Product} from 'src/context/CartContext';
-import {ProductCard} from './ProductCard';
+import React, { useState, useEffect } from 'react';
+import { sanityClient } from 'src/sanityClient';
+import type { Product } from 'src/context/CartContext';
+import { ProductCard } from './ProductCard';
 
 // Адаптируем типы под структуру данных Sanity v3
 interface SanityProduct extends Omit<Product, 'id' | 'image'> {
@@ -15,18 +15,18 @@ interface SanityProduct extends Omit<Product, 'id' | 'image'> {
   image: string;
 }
 
-const CATEGORIES : any[] = [
-  {id: 'all', label: '📋 Все товары'},
-  {id: 'audio', label: '🎵 Аудио'},
-  {id: 'peripherals', label: '💻 Периферия'},
-  {id: 'gadgets', label: '⚙️ Гаджеты'},
-  {id: 'games', label: '🕹️ Игры'}, // 👈 ПРОСТО ДОПИШИТЕ ЭТУ СТРОКУ ЧЕРЕЗ ЗАПЯТУЮ!
-];
+const CATEGORIES = [
+  { id: 'all', label: '📋 Все товары' },
+  { id: 'audio', label: '🎵 Аудио' },
+  { id: 'peripherals', label: '💻 Периферия' },
+  { id: 'gadgets', label: '⚙️ Гаджеты' },
+  { id: 'games', label: '🕹️ Игры' },
+] as const;
 
 export const ProductList: React.FC = () => {
   const [products, setProducts] = useState<SanityProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false); // 👈 УБЕДИТЕСЬ, ЧТО ТУТ НАПИСАНО ИМЕННО ТАК
+  const [isMounted, setIsMounted] = useState(false);
   
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,7 +34,6 @@ export const ProductList: React.FC = () => {
   useEffect(() => {
     setIsMounted(true);
     
-    // 1. Сначала скачиваем товары (как и должно быть)
     sanityClient
       .fetch(`*[_type == "product"] {
         _id,
@@ -46,7 +45,7 @@ export const ProductList: React.FC = () => {
           slug { current }
         },
         "image": image.asset->url
-      }`, {}, {useCdn: false})
+      }`, {}, { useCdn: false })
       .then((data: any) => {
         setProducts(data);
         setLoading(false);
@@ -56,18 +55,17 @@ export const ProductList: React.FC = () => {
         setLoading(false);
       });
     
-    // 2. ОТДЕЛЬНЫЙ БЕЗОПАСНЫЙ ТЕСТ: Скачиваем категории параллельно без влияния на типы товаров
+    // Безопасный фоновый тест категорий
     sanityClient
-      .fetch(`*[_type == "category"] { title, slug { current } }`, {}, {useCdn: false})
+      .fetch(`*[_type == "category"] { title, slug { current } }`, {}, { useCdn: false })
       .then((catData: any) => {
         console.log('=== СПИСОК ВСЕХ КАТЕГОРИЙ ИЗ БАЗЫ: ===', catData);
       })
       .catch((err) => console.error("Ошибка теста категорий:", err));
   }, []);
-  // Формируем отфильтрованный массив товаров на основе выбранной вкладки и поиска
+  
+  // Формируем отфильтрованный массив товаров
   const filteredProducts = products.filter((product) => {
-    console.log('Полный объект товара из Sanity:', product);
-    
     const matchesCategory =
       activeCategory === 'all' ||
       product.category?.slug?.current === activeCategory;
@@ -100,7 +98,7 @@ export const ProductList: React.FC = () => {
       {/* Панель категорий */}
       <div style={styles.filterBar}>
         {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === (cat as any).id;
+          const isActive = activeCategory === cat.id;
           return (
             <button
               key={cat.id}
@@ -141,7 +139,7 @@ export const ProductList: React.FC = () => {
               price: product.price,
               image: product.image || 'placeholder.png',
             };
-            return <ProductCard key={product._id} product={standardProduct}/>;
+            return <ProductCard key={product._id} product={standardProduct} />;
           })}
         </div>
       )}
