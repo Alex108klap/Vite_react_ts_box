@@ -28,7 +28,7 @@ export const ProductList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false); // 👈 УБЕДИТЕСЬ, ЧТО ТУТ НАПИСАНО ИМЕННО ТАК
   
-  const [activeCategory, setActiveCategory] = useState<'all' | 'audio' | 'peripherals' | 'gadgets' | 'games'>('all');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
