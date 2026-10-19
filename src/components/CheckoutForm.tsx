@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useCart } from 'src/context/CartContext';
 import type { CartItem } from 'src/context/CartContext';
+// 1. ИМПОРТИРУЕМ ОФИЦИАЛЬНЫЙ МЕТОД EMAILJS
+import { send } from '@emailjs/browser';
+
 
 export const CheckoutForm: React.FC = () => {
   const { items, getTotalPrice, clearCart } = useCart();
@@ -23,7 +26,7 @@ export const CheckoutForm: React.FC = () => {
       return;
     }
     
-    // 1. КОНТРОЛЬ НОМЕРА ТЕЛЕФОНА
+    // Контроль номера телефона
     const allowedChars = "0123456789 +-()";
     for (let i = 0; i < phone.length; i++) {
       if (!allowedChars.includes(phone[i])) {
@@ -38,7 +41,7 @@ export const CheckoutForm: React.FC = () => {
       return;
     }
     
-    // 2. УМНЫЙ КОНТРОЛЬ АДРЕСА / EMAIL
+    // Умный контроль адреса / email
     const trimmedAddress = address.trim();
     if (trimmedAddress) {
       const sanitizedAddress = trimmedAddress.replace(/,/g, '.').toLowerCase();
@@ -58,12 +61,12 @@ export const CheckoutForm: React.FC = () => {
       }
     }
     
-    // 3. ФОРМИРОВАНИЕ СПИСКА ТОВАРОВ
+    // Формирование списка товаров
     const itemsList = items
       .map((item: CartItem) => `- ${item.name} x ${item.quantity} шт. (${item.price * item.quantity} $)`)
       .join('\n');
     
-    // 4. НАШИ ПРОВЕРЕННЫЕ КЛЮЧИ EMAILJS ИЗ ИСТОРИИ
+    // Ключи EmailJS
     const serviceId = 'service_2xllynb';
     const templateId = 'template_h8ep357';
     const publicKey  = 'd_rtQOMq280z3viDP';
@@ -78,33 +81,20 @@ export const CheckoutForm: React.FC = () => {
       total_price: `${getTotalPrice()} $`
     };
     
-    // ПРЯМОЙ ВСТРОЕННЫЙ FETCH ЗАПРОС К EMAILJS
-    fetch('https://emailjs.com', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: publicKey,
-        template_params: templateParams
+    // 2. ИСПОЛЬЗУЕМ ОФИЦИАЛЬНУЮ ФУНКЦИЮ SEND, КОТОРАЯ ОБХОДИТ БЛОКИРОВКИ БРАУЗЕРА
+    send(serviceId, templateId, templateParams, publicKey)
+      .then((response) => {
+        console.log('SUCCESS!', response.status, response.text);
+        alert(`🎉 Уведомление успешно отправлено на вашу почту!`);
+        
+        setName('');
+        setPhone('');
+        setAddress('');
+        clearCart();
       })
-    })
-      .then(response => {
-        if (response.ok) {
-          alert(`🎉 Уведомление успешно отправлено на вашу почту!`);
-          
-          // Полная очистка полей формы и корзины после успеха
-          setName('');
-          setPhone('');
-          setAddress('');
-          clearCart();
-        } else {
-          alert('Произошла ошибка при отправке через EmailJS. Проверьте конфигурацию сервиса.');
-        }
-      })
-      .catch(error => {
-        console.error('Ошибка сети:', error);
-        alert('Не удалось связаться с почтовым сервером. Проверьте интернет-соединение.');
+      .catch((error) => {
+        console.error('FAILED...', error);
+        alert('Произошла ошибка при отправке через EmailJS. Проверьте конфигурацию сервиса.');
       });
   };
   
@@ -113,7 +103,6 @@ export const CheckoutForm: React.FC = () => {
       <h2 style={styles.title}>📋 Оформление заказа</h2>
       
       <form onSubmit={handleSubmit} style={styles.form}>
-        {/* Поле: Имя */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Ваше имя</label>
           <input
@@ -125,7 +114,6 @@ export const CheckoutForm: React.FC = () => {
           />
         </div>
         
-        {/* Поле: Телефон */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Номер телефона *</label>
           <input
@@ -138,7 +126,6 @@ export const CheckoutForm: React.FC = () => {
           />
         </div>
         
-        {/* Поле: Адрес или Email */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Адрес доставки или Email</label>
           <input
@@ -150,7 +137,6 @@ export const CheckoutForm: React.FC = () => {
           />
         </div>
         
-        {/* Поле: Способ оплаты */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Способ оплаты</label>
           <select
@@ -164,7 +150,6 @@ export const CheckoutForm: React.FC = () => {
           </select>
         </div>
         
-        {/* Инфо-панель стоимости */}
         <div style={styles.summaryBox}>
           <span>Товаров в заказе: <strong>{items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0)} шт.</strong></span>
           <span>К оплате: <strong style={{color: '#1e7e34'}}>{getTotalPrice()} \$</strong></span>
