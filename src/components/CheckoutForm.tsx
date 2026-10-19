@@ -126,16 +126,26 @@ export const CheckoutForm: React.FC = () => {
           />
         </div>
         
+        {/* Поле: Адрес или Email */}
         <div style={styles.inputGroup}>
           <label style={styles.label}>Адрес доставки или Email</label>
           <input
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Новая Почта №5, г. Киев или client@mail.com"
-            style={styles.input}
+            placeholder="Новая Почта №5, г.Харьков или client@mail.com"
+            // Принудительно разрешаем редактирование, сбрасываем стили автозаполнения браузера
+            disabled={false}
+            readOnly={false}
+            style={{
+              ...styles.input,
+              backgroundColor: '#ffffff',
+              WebkitTextFillColor: '#000000', // Делает текст черным в Chrome/Safari
+              color: '#000000'
+            }}
           />
         </div>
+        
         
         <div style={styles.inputGroup}>
           <label style={styles.label}>Способ оплаты</label>
@@ -166,7 +176,7 @@ export const CheckoutForm: React.FC = () => {
 const styles = {
   checkoutContainer: {
     backgroundColor: '#ffffff',
-    border: '2px solid #cbd5e0',
+    border: '2px solid #a0aec0', // Сделали рамку контейнера чуть заметнее
     borderRadius: '12px',
     padding: '24px',
     marginTop: '30px',
@@ -176,60 +186,78 @@ const styles = {
     boxSizing: 'border-box' as const
   },
   title: {
-    fontSize: '22px',
-    margin: '0 0 20px 0',
+    fontSize: '24px', // Увеличили заголовок
+    margin: '0 0 24px 0',
     color: '#1a202c',
     borderBottom: '3px solid #764ba2',
     paddingBottom: '8px',
     display: 'inline-block',
     fontWeight: 'bold' as const
   },
-  form: {display: 'flex', flexDirection: 'column' as const, gap: '18px'},
-  inputGroup: {display: 'flex', flexDirection: 'column' as const, gap: '8px'},
-  label: {fontSize: '15px', fontWeight: 'bold' as const, color: '#2d3748'},
-  input: {
-    padding: '12px 16px',
-    borderRadius: '8px',
-    border: '2px solid #a0aec0',
-    fontSize: '15px',
-    outline: 'none',
-    backgroundColor: '#ffffff',
-    color: '#1a202c',
-    transition: 'all 0.15s ease-in-out'
+  form: { display: 'flex', flexDirection: 'column' as const, gap: '20px' }, // Чуть увеличили отступы между полями
+  inputGroup: { display: 'flex', flexDirection: 'column' as const, gap: '8px' },
+  label: {
+    fontSize: '17px', // Увеличили подписи полей (было 15px)
+    fontWeight: 'bold' as const,
+    color: '#1a202c' // Сделали цвет подписей максимально темным и контрастным
   },
-  select: {
-    padding: '12px 16px',
+  input: {
+    padding: '16px 20px',        // Оставляем просторные отступы
     borderRadius: '8px',
-    border: '2px solid #a0aec0',
-    fontSize: '15px',
+    border: '2px solid #1a202c',   // Чёткая тёмная рамка
+    fontSize: '20px',            // Крупный размер шрифта
+    fontWeight: 'bold' as const,   // Жирный шрифт для максимальной чёткости
     outline: 'none',
-    color: '#1a202c',
+    color: '#000000',            // Угольно-чёрный цвет текста
+    transition: 'all 0.15s ease-in-out',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    
+    // ЭТОТ ТРЮК УБИРАЕТ СЕРЫЙ ЦВЕТ АВТОЗАПОЛНЕНИЯ БРАУЗЕРА:
+    // Мы принудительно заливаем внутреннюю тень белым цветом
+    boxShadow: '0 0 0px 1000px #ffffff inset',
+    WebkitBoxShadow: '0 0 0px 1000px #ffffff inset',
+  },
+  
+  select: {
+    padding: '16px 20px',      // Выравниваем выпадающий список по размеру с полями
+    borderRadius: '8px',
+    border: '2px solid #1a202c',
+    fontSize: '20px',          // Увеличили размер шрифта в выпадающем списке
+    fontWeight: 'bold' as const, // Сделали текст выбора жирным
+    outline: 'none',
+    color: '#000000',          // Сделали текст выбора абсолютно чёрным
     backgroundColor: '#ffffff',
     cursor: 'pointer',
-    transition: 'all 0.15s ease-in-out'
+    transition: 'all 0.15s ease-in-out',
+    width: '100%',
+    boxSizing: 'border-box' as const
   },
+  
   summaryBox: {
     display: 'flex',
     justifyContent: 'space-between',
     backgroundColor: '#f7fafc',
-    padding: '14px',
+    padding: '16px',
     borderRadius: '8px',
-    fontSize: '16px',
-    color: '#2d3748',
+    fontSize: '18px', // Увеличили блок с итоговой суммой
+    color: '#1a202c',
     marginTop: '8px',
-    border: '2px dashed #cbd5e0',
-    fontWeight: '500' as const
+    border: '2px dashed #718096',
+    fontWeight: 'bold' as const // Сделали весь текст в инфо-боксе жирным
   },
   submitButton: {
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: '#ffffff',
     border: 'none',
-    padding: '16px 0',
+    padding: '18px 0', // Сделали кнопку заказа еще массивнее и солиднее
     borderRadius: '8px',
     cursor: 'pointer',
     fontWeight: 'bold' as const,
-    fontSize: '17px',
+    fontSize: '19px', // Увеличили шрифт на кнопке
     boxShadow: '0 4px 12px rgba(118, 75, 162, 0.3)',
-    transition: 'transform 0.1s ease'
+    transition: 'transform 0.1s ease',
+    width: '100%'
   },
 };
+
