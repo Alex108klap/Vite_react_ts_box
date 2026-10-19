@@ -1,16 +1,16 @@
-import React, {useState} from 'react';
-import {useCart} from 'src/context/CartContext';
-import type {CartItem} from 'src/context/CartContext';
+import React, { useState } from 'react';
+import { useCart } from 'src/context/CartContext';
+import type { CartItem } from 'src/context/CartContext';
 
 export const CheckoutForm: React.FC = () => {
-  const {items, getTotalPrice, clearCart} = useCart();
+  const { items, getTotalPrice, clearCart } = useCart();
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (items.length === 0) {
@@ -60,48 +60,54 @@ export const CheckoutForm: React.FC = () => {
     
     // 3. ФОРМИРОВАНИЕ СПИСКА ТОВАРОВ
     const itemsList = items
-      .map((item: CartItem) => `• ${item.name} x ${item.quantity} шт. (${item.price * item.quantity} $)`)
+      .map((item: CartItem) => `- ${item.name} x ${item.quantity} шт. (${item.price * item.quantity} $)`)
       .join('\n');
     
-    // 4. ТЕКСТ ДЛЯ TELEGRAM
-    const messageText = `
-🛍 *НОВЫЙ ЗАКАЗ НА САЙТЕ!*
-
-👤 *Покупатель:* ${name || 'Не указано'}
-📞 *Телефон:* ${phone}
-📍 *Адрес/Почта:* ${trimmedAddress || 'Не указан'}
-💳 *Способ оплаты:* ${paymentMethod === 'card' ? 'Карта' : paymentMethod === 'cash' ? 'Наличные' : 'СБП'}
-
-📦 *Товары в заказе:*
-${itemsList}
-
-💰 *Итого к оплате:* ${getTotalPrice()} $
-    `.trim();
+    // 4. НАШИ ПРОВЕРЕННЫЕ КЛЮЧИ EMAILJS ИЗ ИСТОРИИ
+    const serviceId = 'service_2xllynb';
+    const templateId = 'template_h8ep357';
+    const publicKey  = 'd_rtQOMq280z3viDP';
     
-    // 5. НАДЕЖНАЯ ОТПРАВКА НА НАШ ЛОКАЛЬНЫЙ СЕРВЕР (ПРОКСИ)
-    fetch('http://localhost:5000/api/order', {
+    const templateParams = {
+      to_email: 'kunica108@gmail.com',
+      customer_name: name || 'Не указано',
+      customer_phone: phone,
+      customer_address: trimmedAddress || 'Не указан',
+      payment_method: paymentMethod === 'card' ? 'Карта' : paymentMethod === 'cash' ? 'Наличные' : 'СБП',
+      items_ordered: itemsList,
+      total_price: `${getTotalPrice()} $`
+    };
+    
+    // ПРЯМОЙ ВСТРОЕННЫЙ FETCH ЗАПРОС К EMAILJS
+    fetch('https://emailjs.com', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: messageText })
+      body: JSON.stringify({
+        service_id: serviceId,
+        template_id: templateId,
+        user_id: publicKey,
+        template_params: templateParams
+      })
     })
       .then(response => {
         if (response.ok) {
-          alert(`🎉 Спасибо за заказ, ${name || 'Покупатель'}!\nДанные успешно отправлены. Наш менеджер свяжется с вами.`);
+          alert(`🎉 Уведомление успешно отправлено на вашу почту!`);
           
-          // Очистка формы и корзины после успешной отправки
+          // Полная очистка полей формы и корзины после успеха
           setName('');
           setPhone('');
           setAddress('');
           clearCart();
         } else {
-          alert('Произошла ошибка при отправке заказа на сервер бэкенда.');
+          alert('Произошла ошибка при отправке через EmailJS. Проверьте конфигурацию сервиса.');
         }
       })
       .catch(error => {
         console.error('Ошибка сети:', error);
-        alert('Не удалось связаться с локальным сервером заказов. Проверьте, запущен ли файл server.js.');
+        alert('Не удалось связаться с почтовым сервером. Проверьте интернет-соединение.');
       });
   };
+  
   return (
     <div style={styles.checkoutContainer}>
       <h2 style={styles.title}>📋 Оформление заказа</h2>
@@ -161,8 +167,7 @@ ${itemsList}
         {/* Инфо-панель стоимости */}
         <div style={styles.summaryBox}>
           <span>Товаров в заказе: <strong>{items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0)} шт.</strong></span>
-          <span>К оплате: <strong
-            style={{color: '#1e7e34'}}>{getTotalPrice()} \$</strong></span>
+          <span>К оплате: <strong style={{color: '#1e7e34'}}>{getTotalPrice()} \$</strong></span>
         </div>
         
         <button type="submit" style={styles.submitButton}>
