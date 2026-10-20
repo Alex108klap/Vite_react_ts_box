@@ -227,10 +227,25 @@ const styles = {
     fontSize: '20px',
     fontWeight: 'bold' as const,
     outline: 'none',
-    color: '#000000',
     width: '100%',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    
+    // ЖЕСТКО ФИКСИРУЕМ ЦВЕТА ДЛЯ СМАРТФОНОВ:
+    backgroundColor: '#ffffff',         // Принудительный белый фон
+    color: '#000000',                   // Принудительный угольно-черный текст
+    
+    // ЭТИ СТРОКИ СБРАСЫВАЮТ МОБИЛЬНЫЕ СИСТЕМНЫЕ СТИЛИ (SAFARI И CHROME):
+    WebkitAppearance: 'none' as const,  // Отключает стандартный дизайн iOS/Android
+    MozAppearance: 'none' as const,
+    appearance: 'none' as const,
+    
+    // Добавляем аккуратную иконку стрелочки вниз, так как стандартную мы отключили
+    backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://w3.org' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231a202c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 20px center',
+    backgroundSize: '16px'
   },
+  
   /* ОБНОВЛЕННЫЙ ИСПРАВЛЕННЫЙ БЛОК СТАТИСТИКИ ЗАКАЗА */
   summaryBox: {
     display: 'flex',
