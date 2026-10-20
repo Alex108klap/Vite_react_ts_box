@@ -66,10 +66,10 @@ export const CheckoutForm: React.FC = () => {
       .map((item: CartItem) => `- ${item.name} x ${item.quantity} шт. (${item.price * item.quantity} $)`)
       .join('\n');
     
-    // Ключи EmailJS
-    const serviceId = 'service_2xllynb';
-    const templateId = 'template_h8ep357';
-    const publicKey  = 'd_rtQOMq280z3viDP';
+    // Ключи EmailJS теперь берутся из безопасных переменных окружения Vite
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+    const publicKey  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
     
     const templateParams = {
       to_email: 'kunica108@gmail.com',
