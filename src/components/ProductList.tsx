@@ -21,6 +21,7 @@ const CATEGORIES = [
   { id: 'peripherals', label: '💻 Периферия' },
   { id: 'gadgets', label: '⚙️ Гаджеты' },
   { id: 'games', label: '🕹️ Игры' },
+  { id: 'market', label: '🛒 Товары' },
 ] as const;
 
 export const ProductList: React.FC = () => {
