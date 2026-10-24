@@ -1,7 +1,9 @@
 import product from './product';
-import category from './category' // 👈 Добавили импорт схемы категорий
+import category from './category';
+import { brandType } from './brandType'; // 👈 Добавили импорт схемы брендов
 
 export const schemaTypes = [
   product,
-  category // 👈 Добавили категорию в список доступных типов
+  category,
+  brandType // 👈 Добавили бренд в список доступных типов
 ]

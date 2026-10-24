@@ -1,42 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { sanityClient } from 'src/sanityClient';
-import type { Product } from 'src/context/CartContext';
 import { ProductCard } from './ProductCard';
 
-// Адаптируем типы под структуру данных Sanity v3
-interface SanityProduct extends Omit<Product, 'id' | 'image'> {
-  _id: string;
-  category?: {
-    title: string;
-    slug?: {
-      current: string;
-    };
+interface SanityCategory {
+  title: string;
+  slug?: {
+    current: string;
   };
+}
+
+interface SanityProduct {
+  _id: string;
+  name: string;
+  price: number;
+  description?: string;
+  category?: SanityCategory;
   image: string;
+  discount?: number; // Сделали необязательным, так как скидка есть не везде
 }
 
 const CATEGORIES = [
   { id: 'all', label: '📋 Все товары' },
-  { id: 'audio', label: '🎵 Аудио' },
+  { id: 'audio', label: '🎵  Аудио' },
   { id: 'peripherals', label: '💻 Периферия' },
   { id: 'gadgets', label: '⚙️ Гаджеты' },
   { id: 'games', label: '🕹️ Игры' },
-  { id: 'market', label: '🛒 Товары' },
 ] as const;
 
 export const ProductList: React.FC = () => {
   const [products, setProducts] = useState<SanityProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
   
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
-    setIsMounted(true);
-    
+    // ИСПРАВЛЕНО: Добавили discount в GROQ-запрос, иначе поле не придет из базы Sanity
     sanityClient
-      .fetch(`*[_type == "product"] {
+      .fetch<SanityProduct[]>(`*[_type == "product"] {
         _id,
         name,
         price,
@@ -45,27 +46,19 @@ export const ProductList: React.FC = () => {
           title,
           slug { current }
         },
-        "image": image.asset->url
+        "image": image.asset->url,
+        discount
       }`, {}, { useCdn: false })
-      .then((data: any) => {
-        setProducts(data);
+      .then((data) => {
+        setProducts(data || []);
         setLoading(false);
       })
       .catch((err) => {
         console.error("Ошибка загрузки товаров:", err);
         setLoading(false);
       });
-    
-    // Безопасный фоновый тест категорий
-    sanityClient
-      .fetch(`*[_type == "category"] { title, slug { current } }`, {}, { useCdn: false })
-      .then((catData: any) => {
-        console.log('=== СПИСОК ВСЕХ КАТЕГОРИЙ ИЗ БАЗЫ: ===', catData);
-      })
-      .catch((err) => console.error("Ошибка теста категорий:", err));
   }, []);
   
-  // Формируем отфильтрованный массив товаров
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
       activeCategory === 'all' ||
@@ -77,8 +70,7 @@ export const ProductList: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
   
-  // Защита от Hydration Mismatch
-  if (!isMounted) {
+  if (typeof window === 'undefined') {
     return <div style={styles.loadingBox}>🔄 Инициализация витрины...</div>;
   }
   
@@ -121,7 +113,7 @@ export const ProductList: React.FC = () => {
         })}
       </div>
       
-      {/* Обработка индикатора загрузки и пустых результатов */}
+      {/* Сетка товаров */}
       {loading ? (
         <div style={styles.loadingBox}>
           🔄 Синхронизация с базой данных ТЕХНО-МАРКЕТ...
@@ -131,16 +123,17 @@ export const ProductList: React.FC = () => {
           😢 К сожалению, ничего не найдено по запросу «{searchQuery}»
         </div>
       ) : (
-        /* Адаптивная сетка товаров */
         <div style={styles.grid}>
           {filteredProducts.map((product) => {
-            const standardProduct: Product = {
+            const cardProduct = {
               id: product._id,
               name: product.name,
               price: product.price,
-              image: product.image || 'placeholder.png',
+              image: product.image || 'https://placeholder.com',
+              discount: product.discount, // Просто прокидываем процент дальше в карточку
             };
-            return <ProductCard key={product._id} product={standardProduct} />;
+            
+            return <ProductCard key={product._id} product={cardProduct} />;
           })}
         </div>
       )}
