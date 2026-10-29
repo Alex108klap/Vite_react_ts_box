@@ -12,7 +12,7 @@ export const CheckoutForm: React.FC = () => {
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   
-  // ИСПРАВЛЕНО: Заменили FormEvent на BaseSyntheticEvent для устранения ворнинга TS6385
+  // Применение BaseSyntheticEvent для корректной типизации в проекте
   const handleSubmit = (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     
@@ -43,6 +43,9 @@ export const CheckoutForm: React.FC = () => {
     
     // Умный контроль адреса / email
     const trimmedAddress = address.trim();
+    let detectedClientEmail = '';
+    let finalAddressText = trimmedAddress;
+    
     if (trimmedAddress) {
       const sanitizedAddress = trimmedAddress.replace(/,/g, '.').toLowerCase();
       const hasAt = sanitizedAddress.includes('@');
@@ -57,6 +60,10 @@ export const CheckoutForm: React.FC = () => {
         if (!isCorrectEmail) {
           alert('Похоже, вы ввели некорректный адрес электронной почты. Проверьте правильность написания и обязательно укажите символ @ (например, user@example.com).');
           return;
+        } else {
+          // Выделяем email клиента для отправки второго письма
+          detectedClientEmail = trimmedAddress;
+          finalAddressText = 'Указана электронная почта вместо адреса';
         }
       }
     }
@@ -66,35 +73,47 @@ export const CheckoutForm: React.FC = () => {
       .map((item: CartItem) => `- ${item.name} x ${item.quantity} шт. (${item.price * item.quantity} $)`)
       .join('\n');
     
-    // Ключи EmailJS теперь берутся из безопасных переменных окружения Vite
+    // Ключи EmailJS берутся из безопасных переменных окружения Vite
     const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+    const adminTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+    const clientTemplateId = 'template_nn77thc'; // ID вашего нового шаблона для клиента Аллы
     const publicKey  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
     
     const templateParams = {
       to_email: 'kunica108@gmail.com',
+      user_email: detectedClientEmail || 'Не указан', // Передаем email Аллы в параметры
       user_name: name || 'Не указано',
       user_phone: phone,
-      user_address: trimmedAddress || 'Не указан',
+      user_address: finalAddressText || 'Не указан',
       payment_method: paymentMethod === 'card' ? 'Карта' : paymentMethod === 'cash' ? 'Наличные' : 'СБП',
       items_list: itemsList,
       total_price: `${getTotalPrice()} $`
     };
     
-    
-    // 2. ИСПОЛЬЗУЕМ ОФИЦИАЛЬНУЮ ФУНКЦИЮ SEND, КОТОРАЯ ОБХОДИТ БЛОКИРОВКИ БРАУЗЕРА
-    send(serviceId, templateId, templateParams, publicKey)
+    // 2. ПОСЛЕДОВАТЕЛЬНАЯ ОТПРАВКА ДВУХ ПИСЕМ С ОТДЕЛЬНЫМИ ЛОГАМИ
+    send(serviceId, adminTemplateId, templateParams, publicKey)
       .then((response) => {
-        console.log('SUCCESS!', response.status, response.text);
-        alert(`🎉 Уведомление успешно отправлено на вашу почту!`);
+        console.log('--- 1. ПИСЬМО АДМИНИСТРАТОРУ ОТПРАВЛЕНО! ---', response.status, response.text);
         
+        // Если в поле ввода был указан Email, отправляем второе письмо клиенту (Алле)
+        if (detectedClientEmail) {
+          return send(serviceId, clientTemplateId, templateParams, publicKey)
+            .then((clientResponse) => {
+              console.log('--- 2. ПИСЬМО КЛИЕНТУ ОТПРАВЛЕНО! ---', clientResponse.status, clientResponse.text);
+              alert(`🎉 Заказ успешно оформлен! Ответные уведомления отправлены администратору и на вашу почту ${detectedClientEmail}`);
+            });
+        } else {
+          alert(`🎉 Заказ успешно оформлен! Уведомление отправлено администратору.`);
+        }
+      })
+      .then(() => {
         setName('');
         setPhone('');
         setAddress('');
         clearCart();
       })
-      .catch((error) => {
-        console.error('FAILED...', error);
+      .catch((error: unknown) => {
+        console.error('ОШИБКА ОТПРАВКИ EMAILJS:', error);
         alert('Произошла ошибка при отправке через EmailJS. Проверьте конфигурацию сервиса.');
       });
   };
@@ -192,7 +211,6 @@ export const CheckoutForm: React.FC = () => {
   );
 };
 
-// ВОССТАНОВЛЕННЫЙ ОБЪЕКТ СТИЛЕЙ БЕЗ ОБРЫВОВ
 const styles = {
   checkoutContainer: {
     backgroundColor: '#ffffff',
@@ -227,27 +245,18 @@ const styles = {
     border: '2px solid #1a202c',
     fontSize: '20px',
     fontWeight: 'bold' as const,
-    outline: 'none',
-    color: '#000000',
-    backgroundColor: '#ffffff',
-    colorScheme: 'light',
-    transition: 'all 0.15s ease-in-out',
-    width: '100%',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    width: '100%'
   },
   select: {
     padding: '16px 20px',
     borderRadius: '8px',
     border: '2px solid #1a202c',
-    fontSize: '20px',
+    fontSize: '18px',
     fontWeight: 'bold' as const,
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box' as const,
     backgroundColor: '#ffffff',
-    color: '#000000',
-    colorScheme: 'light',
-    WebkitAppearance: 'none' as const
+    boxSizing: 'border-box' as const,
+    width: '100%'
   },
   summaryBox: {
     backgroundColor: '#f7fafc',
@@ -256,7 +265,7 @@ const styles = {
     padding: '16px',
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '8px'
+    gap: '12px'
   },
   summaryItem: {
     display: 'flex',
@@ -270,13 +279,12 @@ const styles = {
     color: '#ffffff',
     border: 'none',
     borderRadius: '8px',
-    padding: '18px 20px',
+    padding: '18px',
     fontSize: '20px',
     fontWeight: 'bold' as const,
     cursor: 'pointer',
-    transition: 'background-color 0.2s ease-in-out',
+    transition: 'background-color 0.2s ease',
     width: '100%',
-    boxSizing: 'border-box' as const,
-    boxShadow: '0 4px 12px rgba(118, 75, 162, 0.3)'
+    boxSizing: 'border-box' as const
   }
 };
