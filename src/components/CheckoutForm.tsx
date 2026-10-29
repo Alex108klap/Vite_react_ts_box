@@ -4,7 +4,6 @@ import type { CartItem } from 'src/context/CartContext';
 // 1. ИМПОРТИРУЕМ ОФИЦИАЛЬНЫЙ МЕТОД EMAILJS
 import { send } from '@emailjs/browser';
 
-
 export const CheckoutForm: React.FC = () => {
   const { items, getTotalPrice, clearCart } = useCart();
   
@@ -13,7 +12,8 @@ export const CheckoutForm: React.FC = () => {
   const [address, setAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
   
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // ИСПРАВЛЕНО: Заменили FormEvent на BaseSyntheticEvent для устранения ворнинга TS6385
+  const handleSubmit = (e: React.BaseSyntheticEvent) => {
     e.preventDefault();
     
     if (items.length === 0) {
@@ -73,13 +73,14 @@ export const CheckoutForm: React.FC = () => {
     
     const templateParams = {
       to_email: 'kunica108@gmail.com',
-      customer_name: name || 'Не указано',
-      customer_phone: phone,
-      customer_address: trimmedAddress || 'Не указан',
+      user_name: name || 'Не указано',
+      user_phone: phone,
+      user_address: trimmedAddress || 'Не указан',
       payment_method: paymentMethod === 'card' ? 'Карта' : paymentMethod === 'cash' ? 'Наличные' : 'СБП',
-      items_ordered: itemsList,
+      items_list: itemsList,
       total_price: `${getTotalPrice()} $`
     };
+    
     
     // 2. ИСПОЛЬЗУЕМ ОФИЦИАЛЬНУЮ ФУНКЦИЮ SEND, КОТОРАЯ ОБХОДИТ БЛОКИРОВКИ БРАУЗЕРА
     send(serviceId, templateId, templateParams, publicKey)
@@ -100,9 +101,27 @@ export const CheckoutForm: React.FC = () => {
   
   return (
     <div style={styles.checkoutContainer}>
+      {/* ПРИНУДИТЕЛЬНЫЙ СБРОС ТЕМЫ НА СВЕТЛУЮ ДЛЯ ВСЕХ ПОЛЕЙ ВНУТРИ ДАННОЙ ФОРМЫ */}
+      <style>{`
+        .force-light-form input,
+        .force-light-form select {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          color-scheme: light !important;
+        }
+        .force-light-form input:-webkit-autofill,
+        .force-light-form input:-webkit-autofill:hover,
+        .force-light-form input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #000000 !important;
+          box-shadow: 0 0 0px 1000px #ffffff inset !important;
+          -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+          transition: background-color 5000s ease-in-out 0s !important;
+        }
+      `}</style>
+      
       <h2 style={styles.title}>📋 Оформление заказа</h2>
       
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <form onSubmit={handleSubmit} style={styles.form} className="force-light-form">
         <div style={styles.inputGroup}>
           <label style={styles.label}>Ваше имя</label>
           <input
@@ -136,12 +155,7 @@ export const CheckoutForm: React.FC = () => {
             placeholder="Новая Почта №5, г.Харьков или client@mail.com"
             disabled={false}
             readOnly={false}
-            style={{
-              ...styles.input,
-              backgroundColor: '#ffffff',
-              WebkitTextFillColor: '#000000',
-              color: '#000000'
-            }}
+            style={styles.input}
           />
         </div>
         
@@ -158,7 +172,7 @@ export const CheckoutForm: React.FC = () => {
           </select>
         </div>
         
-        {/* Исправленный информационный блок */}
+        {/* Информационный блок */}
         <div style={styles.summaryBox}>
           <div style={styles.summaryItem}>
             <span>Товаров в заказе:</span>
@@ -166,7 +180,7 @@ export const CheckoutForm: React.FC = () => {
           </div>
           <div style={styles.summaryItem}>
             <span>К оплате:</span>
-            <strong style={{color: '#28a745', fontSize: '22px'}}>{getTotalPrice()} \$</strong>
+            <strong style={{color: '#28a745', fontSize: '22px'}}>{getTotalPrice()} $</strong>
           </div>
         </div>
         
@@ -178,6 +192,7 @@ export const CheckoutForm: React.FC = () => {
   );
 };
 
+// ВОССТАНОВЛЕННЫЙ ОБЪЕКТ СТИЛЕЙ БЕЗ ОБРЫВОВ
 const styles = {
   checkoutContainer: {
     backgroundColor: '#ffffff',
@@ -214,11 +229,11 @@ const styles = {
     fontWeight: 'bold' as const,
     outline: 'none',
     color: '#000000',
+    backgroundColor: '#ffffff',
+    colorScheme: 'light',
     transition: 'all 0.15s ease-in-out',
     width: '100%',
-    boxSizing: 'border-box' as const,
-    boxShadow: '0 0 0px 1000px #ffffff inset',
-    WebkitBoxShadow: '0 0 0px 1000px #ffffff inset',
+    boxSizing: 'border-box' as const
   },
   select: {
     padding: '16px 20px',
@@ -229,51 +244,39 @@ const styles = {
     outline: 'none',
     width: '100%',
     boxSizing: 'border-box' as const,
-    
-    // ЖЕСТКО ФИКСИРУЕМ ЦВЕТА ДЛЯ СМАРТФОНОВ:
-    backgroundColor: '#ffffff',         // Принудительный белый фон
-    color: '#000000',                   // Принудительный угольно-черный текст
-    
-    // ЭТИ СТРОКИ СБРАСЫВАЮТ МОБИЛЬНЫЕ СИСТЕМНЫЕ СТИЛИ (SAFARI И CHROME):
-    WebkitAppearance: 'none' as const,  // Отключает стандартный дизайн iOS/Android
-    MozAppearance: 'none' as const,
-    appearance: 'none' as const,
-    
-    // Добавляем аккуратную иконку стрелочки вниз, так как стандартную мы отключили
-    backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://w3.org' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231a202c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 20px center',
-    backgroundSize: '16px'
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    colorScheme: 'light',
+    WebkitAppearance: 'none' as const
   },
-  
-  /* ОБНОВЛЕННЫЙ ИСПРАВЛЕННЫЙ БЛОК СТАТИСТИКИ ЗАКАЗА */
   summaryBox: {
-    display: 'flex',
-    flexDirection: 'column' as const, // Выстраиваем строки строго друг под другом
-    gap: '12px',
-    padding: '16px',
-    border: '2px dashed #a0aec0',
-    borderRadius: '8px',
     backgroundColor: '#f7fafc',
-    color: '#1a202c',
-    fontSize: '18px'
+    border: '1px solid #e2e8f0',
+    borderRadius: '8px',
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '8px'
   },
   summaryItem: {
     display: 'flex',
-    justifyContent: 'space-between', // Разносим текст и цифры по краям строки
+    justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%'
+    fontSize: '16px',
+    color: '#4a5568'
   },
   submitButton: {
-    padding: '18px',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    backgroundColor: '#764ba2',
     color: '#ffffff',
     border: 'none',
     borderRadius: '8px',
+    padding: '18px 20px',
     fontSize: '20px',
     fontWeight: 'bold' as const,
     cursor: 'pointer',
-    transition: 'transform 0.1s ease',
-    boxShadow: '0 4px 15px rgba(118, 75, 162, 0.3)'
+    transition: 'background-color 0.2s ease-in-out',
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    boxShadow: '0 4px 12px rgba(118, 75, 162, 0.3)'
   }
 };

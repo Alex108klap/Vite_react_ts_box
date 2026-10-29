@@ -69,8 +69,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
 const styles = {
   card: {
-    border: '1px solid #e0e0e0',
-    padding: '16px',
+    border: '1px solid #e0e0e0', padding: '16px',
     borderRadius: '12px',
     textAlign: 'center' as const,
     width: '220px',
