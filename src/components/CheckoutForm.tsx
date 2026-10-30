@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import { useCart } from 'src/context/CartContext';
-import type { CartItem } from 'src/context/CartContext';
-// 1. ИМПОРТИРУЕМ ОФИЦИАЛЬНЫЙ МЕТОД EMAILJS
-import { send } from '@emailjs/browser';
 
 export const CheckoutForm: React.FC = () => {
   const { items, getTotalPrice, clearCart } = useCart();
@@ -10,114 +7,81 @@ export const CheckoutForm: React.FC = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Применение BaseSyntheticEvent для корректной типизации в проекте
-  const handleSubmit = (e: React.BaseSyntheticEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+
     if (items.length === 0) {
       alert('Ваша корзина пуста! Добавьте товары перед оформлением заказа.');
       return;
     }
-    
-    if (!phone.trim()) {
-      alert('Пожалуйста, введите ваш номер телефона.');
+
+    const normalizedPhone = phone.trim();
+    const allowedChars = '0123456789 +-()';
+    if ([...normalizedPhone].some((character) => !allowedChars.includes(character))) {
+      alert('Номер телефона может содержать только цифры и знаки (+, -, пробелы, скобки).');
       return;
     }
-    
-    // Контроль номера телефона
-    const allowedChars = "0123456789 +-()";
-    for (let i = 0; i < phone.length; i++) {
-      if (!allowedChars.includes(phone[i])) {
-        alert('Номер телефона может содержать только цифры и знаки (+, -, пробелы, скобки). Буквы не допускаются!');
+
+    const digitsOnly = normalizedPhone.replace(/\D/g, '');
+    if (digitsOnly.length < 9 || digitsOnly.length > 15) {
+      alert('Пожалуйста, введите корректный номер телефона (от 9 до 15 цифр).');
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const orderPayload = {
+      name: name.trim(),
+      phone: normalizedPhone,
+      address: address.trim(),
+      customerEmail: customerEmail.trim(),
+      paymentMethod,
+      items: items.map(({ id, quantity }) => ({ id, quantity })),
+      website: String(formData.get('website') ?? ''),
+    };
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (result.error === 'Order email service is not configured.') {
+          alert('Сервер EmailJS не настроен. Проверьте переменные окружения сервера.');
+        } else {
+          alert('Не удалось отправить заказ. Проверьте соединение и попробуйте ещё раз.');
+        }
         return;
       }
-    }
-    
-    const digitsOnly = phone.replace(/\D/g, '');
-    if (digitsOnly.length < 9 || digitsOnly.length > 15) {
-      alert(`Пожалуйста, введите корректный номер телефона. Вы ввели ${digitsOnly.length} цифр, а должно быть от 9 до 15.`);
-      return;
-    }
-    
-    // Умный контроль адреса / email
-    const trimmedAddress = address.trim();
-    let detectedClientEmail = '';
-    let finalAddressText = trimmedAddress;
-    
-    if (trimmedAddress) {
-      const sanitizedAddress = trimmedAddress.replace(/,/g, '.').toLowerCase();
-      const hasAt = sanitizedAddress.includes('@');
-      const commonDomains = ['.ua', '.com', '.ru', '.net', '.org', '.biz', '.info', '.me', '.edu', '.gov'];
-      const hasDomainEnding = commonDomains.some(domain => sanitizedAddress.endsWith(domain));
-      
-      if (hasAt || hasDomainEnding) {
-        const atIndex = sanitizedAddress.indexOf('@');
-        const lastDotIndex = sanitizedAddress.lastIndexOf('.');
-        const isCorrectEmail = hasAt && atIndex > 0 && lastDotIndex > atIndex + 1;
-        
-        if (!isCorrectEmail) {
-          alert('Похоже, вы ввели некорректный адрес электронной почты. Проверьте правильность написания и обязательно укажите символ @ (например, user@example.com).');
-          return;
-        } else {
-          // Выделяем email клиента для отправки второго письма
-          detectedClientEmail = trimmedAddress;
-          finalAddressText = 'Указана электронная почта вместо адреса';
-        }
+
+      setName('');
+      setPhone('');
+      setAddress('');
+      setCustomerEmail('');
+      clearCart();
+
+      if (orderPayload.customerEmail && result.confirmationEmailSent) {
+        alert(`🎉 Заказ принят! Подтверждение отправлено на ${orderPayload.customerEmail}.`);
+      } else if (orderPayload.customerEmail) {
+        alert('Заказ принят администратором, но письмо с подтверждением не удалось отправить.');
+      } else {
+        alert('🎉 Заказ принят! Уведомление отправлено администратору.');
       }
+    } catch (error: unknown) {
+      console.error('Ошибка отправки заказа:', error);
+      alert('Не удалось отправить заказ. Проверьте соединение и попробуйте ещё раз.');
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    // Формирование списка товаров
-    const itemsList = items
-      .map((item: CartItem) => `- ${item.name} x ${item.quantity} шт. (${item.price * item.quantity} $)`)
-      .join('\n');
-    
-    // Ключи EmailJS берутся из безопасных переменных окружения Vite
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-    const adminTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-    const clientTemplateId = 'template_nn77thc'; // ID вашего нового шаблона для клиента Аллы
-    const publicKey  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-    
-    const templateParams = {
-      to_email: 'kunica108@gmail.com',
-      user_email: detectedClientEmail || 'Не указан', // Передаем email Аллы в параметры
-      user_name: name || 'Не указано',
-      user_phone: phone,
-      user_address: finalAddressText || 'Не указан',
-      payment_method: paymentMethod === 'card' ? 'Карта' : paymentMethod === 'cash' ? 'Наличные' : 'СБП',
-      items_list: itemsList,
-      total_price: `${getTotalPrice()} $`
-    };
-    
-    // 2. ПОСЛЕДОВАТЕЛЬНАЯ ОТПРАВКА ДВУХ ПИСЕМ С ОТДЕЛЬНЫМИ ЛОГАМИ
-    send(serviceId, adminTemplateId, templateParams, publicKey)
-      .then((response) => {
-        console.log('--- 1. ПИСЬМО АДМИНИСТРАТОРУ ОТПРАВЛЕНО! ---', response.status, response.text);
-        
-        // Если в поле ввода был указан Email, отправляем второе письмо клиенту (Алле)
-        if (detectedClientEmail) {
-          return send(serviceId, clientTemplateId, templateParams, publicKey)
-            .then((clientResponse) => {
-              console.log('--- 2. ПИСЬМО КЛИЕНТУ ОТПРАВЛЕНО! ---', clientResponse.status, clientResponse.text);
-              alert(`🎉 Заказ успешно оформлен! Ответные уведомления отправлены администратору и на вашу почту ${detectedClientEmail}`);
-            });
-        } else {
-          alert(`🎉 Заказ успешно оформлен! Уведомление отправлено администратору.`);
-        }
-      })
-      .then(() => {
-        setName('');
-        setPhone('');
-        setAddress('');
-        clearCart();
-      })
-      .catch((error: unknown) => {
-        console.error('ОШИБКА ОТПРАВКИ EMAILJS:', error);
-        alert('Произошла ошибка при отправке через EmailJS. Проверьте конфигурацию сервиса.');
-      });
   };
-  
   return (
     <div style={styles.checkoutContainer}>
       {/* ПРИНУДИТЕЛЬНЫЙ СБРОС ТЕМЫ НА СВЕТЛУЮ ДЛЯ ВСЕХ ПОЛЕЙ ВНУТРИ ДАННОЙ ФОРМЫ */}
@@ -141,6 +105,14 @@ export const CheckoutForm: React.FC = () => {
       <h2 style={styles.title}>📋 Оформление заказа</h2>
       
       <form onSubmit={handleSubmit} style={styles.form} className="force-light-form">
+        <input
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}
+        />
         <div style={styles.inputGroup}>
           <label style={styles.label}>Ваше имя</label>
           <input
@@ -179,6 +151,18 @@ export const CheckoutForm: React.FC = () => {
         </div>
         
         <div style={styles.inputGroup}>
+          <label htmlFor="customer-email" style={styles.label}>Email для подтверждения (необязательно)</label>
+          <input
+            id="customer-email"
+            type="email"
+            autoComplete="email"
+            value={customerEmail}
+            onChange={(e) => setCustomerEmail(e.target.value)}
+            placeholder="you@example.com"
+            style={styles.input}
+          />
+        </div>
+        <div style={styles.inputGroup}>
           <label style={styles.label}>Способ оплаты</label>
           <select
             value={paymentMethod}
@@ -195,7 +179,7 @@ export const CheckoutForm: React.FC = () => {
         <div style={styles.summaryBox}>
           <div style={styles.summaryItem}>
             <span>Товаров в заказе:</span>
-            <strong>{items.reduce((sum: number, item: CartItem) => sum + item.quantity, 0)} шт.</strong>
+            <strong>{items.reduce((sum, item) => sum + item.quantity, 0)} шт.</strong>
           </div>
           <div style={styles.summaryItem}>
             <span>К оплате:</span>
@@ -203,8 +187,8 @@ export const CheckoutForm: React.FC = () => {
           </div>
         </div>
         
-        <button type="submit" style={styles.submitButton}>
-          Подтвердить и заказать
+        <button type="submit" disabled={isSubmitting} style={styles.submitButton}>
+          {isSubmitting ? 'Отправляем...' : 'Подтвердить и заказать'}
         </button>
       </form>
     </div>
