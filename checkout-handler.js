@@ -149,12 +149,12 @@ export async function handleCheckout(body, { env = process.env, origin = '', ip 
   }
 
   const config = {
-    serviceId: env.EMAILJS_SERVICE_ID,
-    adminTemplateId: env.EMAILJS_ADMIN_TEMPLATE_ID,
-    clientTemplateId: env.EMAILJS_CLIENT_TEMPLATE_ID || 'template_nn77thc',
-    publicKey: env.EMAILJS_PUBLIC_KEY,
+    serviceId: env.EMAILJS_SERVICE_ID || env.VITE_EMAILJS_SERVICE_ID,
+    adminTemplateId: env.EMAILJS_ADMIN_TEMPLATE_ID || env.VITE_EMAILJS_TEMPLATE_ID || env.VITE_EMAILJS_ADMIN_TEMPLATE_ID,
+    clientTemplateId: env.EMAILJS_CLIENT_TEMPLATE_ID || env.VITE_EMAILJS_CLIENT_TEMPLATE_ID || 'template_nn77thc',
+    publicKey: env.EMAILJS_PUBLIC_KEY || env.VITE_EMAILJS_PUBLIC_KEY,
     privateKey: env.EMAILJS_PRIVATE_KEY,
-    adminEmail: env.EMAILJS_ADMIN_EMAIL,
+    adminEmail: env.EMAILJS_ADMIN_EMAIL || env.VITE_EMAILJS_ADMIN_EMAIL || 'kunica108@gmail.com',
     sourceOrigin: origin || env.EMAILJS_SOURCE_ORIGIN || [...allowedOrigins][0],
   };
   if ([config.serviceId, config.adminTemplateId, config.clientTemplateId, config.publicKey, config.adminEmail, config.sourceOrigin].some((value) => !value)) {
