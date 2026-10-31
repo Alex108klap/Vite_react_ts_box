@@ -33,32 +33,27 @@ export const CheckoutForm: React.FC = () => {
       return;
     }
 
-    const formData = new FormData(event.currentTarget);
-    const orderPayload = {
-      name: name.trim(),
-      phone: normalizedPhone,
-      address: address.trim(),
-      customerEmail: customerEmail.trim(),
-      paymentMethod,
-      items: items.map(({ id, quantity }) => ({ id, quantity })),
-      website: String(formData.get('website') ?? ''),
-    };
-
+    const normalizedEmail = customerEmail.trim();
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload),
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: normalizedPhone,
+          address: address.trim(),
+          customerEmail: normalizedEmail,
+          paymentMethod,
+          items: items.map(({ id, quantity }) => ({ id, quantity })),
+        }),
       });
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        if (result.error === 'Order email service is not configured.') {
-          alert('Сервер EmailJS не настроен. Проверьте переменные окружения сервера.');
-        } else {
-          alert('Не удалось отправить заказ. Проверьте соединение и попробуйте ещё раз.');
-        }
+        alert(result.error === 'Order email service is not configured.'
+          ? 'EmailJS не настроен на Vercel. Проверьте переменные окружения проекта.'
+          : 'Не удалось отправить заказ. Проверьте соединение и попробуйте ещё раз.');
         return;
       }
 
@@ -68,10 +63,10 @@ export const CheckoutForm: React.FC = () => {
       setCustomerEmail('');
       clearCart();
 
-      if (orderPayload.customerEmail && result.confirmationEmailSent) {
-        alert(`🎉 Заказ принят! Подтверждение отправлено на ${orderPayload.customerEmail}.`);
-      } else if (orderPayload.customerEmail) {
-        alert('Заказ принят администратором, но письмо с подтверждением не удалось отправить.');
+      if (normalizedEmail && result.confirmationEmailSent) {
+        alert(`🎉 Заказ принят! Подтверждение отправлено на ${normalizedEmail}.`);
+      } else if (normalizedEmail) {
+        alert(`Заказ принят администратором, но не удалось отправить подтверждение на ${normalizedEmail}.`);
       } else {
         alert('🎉 Заказ принят! Уведомление отправлено администратору.');
       }
@@ -105,14 +100,6 @@ export const CheckoutForm: React.FC = () => {
       <h2 style={styles.title}>📋 Оформление заказа</h2>
       
       <form onSubmit={handleSubmit} style={styles.form} className="force-light-form">
-        <input
-          type="text"
-          name="website"
-          tabIndex={-1}
-          autoComplete="off"
-          aria-hidden="true"
-          style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}
-        />
         <div style={styles.inputGroup}>
           <label style={styles.label}>Ваше имя</label>
           <input
