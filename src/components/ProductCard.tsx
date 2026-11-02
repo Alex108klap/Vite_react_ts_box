@@ -37,15 +37,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
   
   return (
-    <div style={styles.card}>
-      <div style={{ position: 'relative', width: '100%', height: '180px' }}>
+    <div className="product-card" style={styles.card}>
+      <div className="product-card-image-wrap" style={{ position: 'relative', width: '100%', height: '205px' }}>
         <img src={product.image} alt={product.name} style={styles.image} />
         {hasDiscount && (
           <span style={styles.saleBadge}>-{product.discount}%</span>
         )}
       </div>
       
-      <h3 style={styles.title}>{product.name}</h3>
+      <h3 className="product-card-title" style={styles.title}>{product.name}</h3>
       
       <div style={styles.priceContainer}>
         {hasDiscount ? (
@@ -56,11 +56,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <span style={styles.newPrice}>{finalPrice} $</span>
           </>
         ) : (
-          <span style={styles.normalPrice}>Цена: <strong>{product.price} $</strong></span>
+          <span className="product-card-price" style={styles.normalPrice}>Цена: <strong>{product.price} $</strong></span>
         )}
       </div>
       
-      <button onClick={handleAddToCart} style={styles.button}>
+      <button className="product-card-button" onClick={handleAddToCart} style={styles.button}>
         Добавить в корзину
       </button>
     </div>
@@ -72,18 +72,19 @@ const styles = {
     border: '1px solid #e0e0e0', padding: '16px',
     borderRadius: '12px',
     textAlign: 'center' as const,
-    width: '220px',
+    width: '100%',
+    maxWidth: '300px',
     backgroundColor: '#fff',
     boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
     display: 'flex',
     flexDirection: 'column' as const,
     justifyContent: 'space-between',
-    minHeight: '350px',
+    minHeight: '410px',
     position: 'relative' as const,
   },
   image: {
     width: '100%',
-    height: '180px',
+    height: '205px',
     objectFit: 'cover' as const,
     borderRadius: '8px'
   },
@@ -95,14 +96,14 @@ const styles = {
     color: '#fff',
     padding: '4px 8px',
     borderRadius: '6px',
-    fontSize: '11px',
+    fontSize: '13px',
     fontWeight: 'bold',
     letterSpacing: '0.5px'
   },
   title: {
-    fontSize: '16px',
+    fontSize: '19px',
     margin: '12px 0 6px 0',
-    color: '#333'
+    color: '#20242e'
   },
   priceContainer: {
     display: 'flex',
@@ -113,12 +114,14 @@ const styles = {
     minHeight: '24px'
   },
   normalPrice: {
-    color: '#666',
+    color: '#292e3b',
+    fontSize: '17px',
   },
   oldPrice: {
-    color: '#a0aec0',
+    color: '#4b5563',
     textDecoration: 'line-through',
-    fontSize: '14px'
+    fontSize: '16px',
+    fontWeight: '500' as const,
   },
   newPrice: {
     color: '#e53e3e',
@@ -129,10 +132,11 @@ const styles = {
     backgroundColor: '#007bff',
     color: '#fff',
     border: 'none',
-    padding: '10px 16px',
+    padding: '13px 16px',
     borderRadius: '6px',
     cursor: 'pointer',
     width: '100%',
-    fontWeight: 'bold' as const
+    fontWeight: 'bold' as const,
+    fontSize: '16px'
   }
 };

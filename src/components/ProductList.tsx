@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { sanityClient } from 'src/sanityClient';
 import { ProductCard } from './ProductCard';
 
@@ -16,26 +16,46 @@ interface SanityProduct {
   description?: string;
   category?: SanityCategory;
   image: string;
-  discount?: number; // Сделали необязательным, так как скидка есть не везде
+  discount?: number;
 }
 
-const CATEGORIES = [
-  { id: 'all', label: '📋 Все товары' },
-  { id: 'audio', label: '🎵  Аудио' },
-  { id: 'peripherals', label: '💻 Периферия' },
-  { id: 'gadgets', label: '⚙️ Гаджеты' },
-  { id: 'games', label: '🕹️ Игры' },
-] as const;
+interface CategoryOption {
+  id: string;
+  title: string;
+  count: number;
+}
+
+const CATEGORY_ICONS: Record<string, string> = {
+  __all_products__: '🛍️',
+  audio: '🎧',
+  peripherals: '⌨️',
+  gadgets: '⌚',
+  games: '🎮',
+};
+const ALL_PRODUCTS_CATEGORY_ID = '__all_products__';
+
+const formatProductCount = (count: number) => {
+  const lastTwoDigits = count % 100;
+  const lastDigit = count % 10;
+  const noun = lastTwoDigits >= 11 && lastTwoDigits <= 14
+    ? 'товаров'
+    : lastDigit === 1
+      ? 'товар'
+      : lastDigit >= 2 && lastDigit <= 4
+        ? 'товара'
+        : 'товаров';
+
+  return `${count} ${noun}`;
+};
 
 export const ProductList: React.FC = () => {
   const [products, setProducts] = useState<SanityProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [loadError, setLoadError] = useState(false);
+
   useEffect(() => {
-    // ИСПРАВЛЕНО: Добавили discount в GROQ-запрос, иначе поле не придет из базы Sanity
     sanityClient
       .fetch<SanityProduct[]>(`*[_type == "product"] {
         _id,
@@ -49,162 +69,125 @@ export const ProductList: React.FC = () => {
         "image": image.asset->url,
         discount
       }`, {}, { useCdn: false })
-      .then((data) => {
-        setProducts(data || []);
-        setLoading(false);
-      })
+      .then((data) => setProducts(data || []))
       .catch((err) => {
-        console.error("Ошибка загрузки товаров:", err);
-        setLoading(false);
-      });
+        console.error('Ошибка загрузки товаров:', err);
+        setLoadError(true);
+      })
+      .finally(() => setLoading(false));
   }, []);
-  
+
+  const categories = useMemo<CategoryOption[]>(() => {
+    const categoryMap = new Map<string, CategoryOption>();
+
+    products.forEach((product) => {
+      const title = product.category?.title?.trim();
+      const id = product.category?.slug?.current;
+      if (!title || !id) return;
+
+      const existing = categoryMap.get(id);
+
+      if (existing) existing.count += 1;
+      else categoryMap.set(id, { id, title, count: 1 });
+    });
+
+    return [
+      { id: ALL_PRODUCTS_CATEGORY_ID, title: 'Все товары', count: products.length },
+      ...Array.from(categoryMap.values()),
+    ];
+  }, [products]);
+
+  const selectedCategory = categories.find((category) => category.id === activeCategory);
   const filteredProducts = products.filter((product) => {
-    const matchesCategory =
-      activeCategory === 'all' ||
-      product.category?.slug?.current === activeCategory;
-    
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const productCategory = product.category?.slug?.current;
+    const matchesCategory = activeCategory === ALL_PRODUCTS_CATEGORY_ID || productCategory === activeCategory;
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
-  
-  if (typeof window === 'undefined') {
-    return <div style={styles.loadingBox}>🔄 Инициализация витрины...</div>;
+
+  if (!activeCategory) {
+    return (
+      <section className="store-catalog" aria-labelledby="category-heading">
+        <div className="category-intro">
+          <p className="category-eyebrow">ТЕХНО-МАРКЕТ · КАТАЛОГ</p>
+          <h2 id="category-heading">Выберите категорию</h2>
+          <p>Найдите нужные товары в нашем магазине</p>
+        </div>
+
+        {loading ? (
+          <div className="catalog-message" role="status">Загружаем категории и товары…</div>
+        ) : loadError ? (
+          <div className="catalog-message" role="alert">Не удалось загрузить каталог. Попробуйте обновить страницу.</div>
+        ) : categories.length === 0 ? (
+          <div className="catalog-message">Пока в магазине нет категорий с товарами.</div>
+        ) : (
+          <div className="category-grid">
+            {categories.map((category, index) => (
+              <button
+                className="category-card"
+                key={category.id}
+                type="button"
+                onClick={() => {
+                  setActiveCategory(category.id);
+                  setSearchQuery('');
+                }}
+              >
+                <span className={`category-icon category-icon-${index % 4}`} aria-hidden="true">
+                  {CATEGORY_ICONS[category.id] || '✦'}
+                </span>
+                <span className="category-card-copy">
+                  <span className="category-card-title">{category.title}</span>
+                  <span className="category-card-count">{formatProductCount(category.count)}</span>
+                </span>
+                <span className="category-card-arrow" aria-hidden="true">→</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    );
   }
-  
+
   return (
-    <div style={styles.container}>
-      
-      {/* Панель поиска */}
-      <div style={styles.searchContainer}>
+    <section className="store-catalog" aria-labelledby="products-heading">
+      <div className="products-toolbar">
+        <button className="back-to-categories" type="button" onClick={() => setActiveCategory(null)}>
+          <span aria-hidden="true">←</span> Все категории
+        </button>
+        <div className="products-heading-wrap">
+          <h2 id="products-heading">{selectedCategory?.title || 'Товары'}</h2>
+          <p>{formatProductCount(filteredProducts.length)}</p>
+        </div>
         <input
-          type="text"
-          placeholder="🔍 Поиск гаджетов по названию..."
+          className="product-search"
+          type="search"
+          placeholder="Поиск в категории…"
+          aria-label="Поиск товаров в категории"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={styles.searchInput}
+          onChange={(event) => setSearchQuery(event.target.value)}
         />
       </div>
-      
-      {/* Панель категорий */}
-      <div style={styles.filterBar}>
-        {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setActiveCategory(cat.id);
-                setSearchQuery('');
-              }}
-              style={{
-                ...styles.filterButton,
-                backgroundColor: isActive ? '#667eea' : '#fff',
-                color: isActive ? '#fff' : '#555',
-                border: isActive ? '1px solid #667eea' : '1px solid #e1e4e8',
-                boxShadow: isActive ? '0 4px 10px rgba(102, 126, 234, 0.2)' : 'none',
-              }}
-            >
-              {cat.label}
-            </button>
-          );
-        })}
-      </div>
-      
-      {/* Сетка товаров */}
+
       {loading ? (
-        <div style={styles.loadingBox}>
-          🔄 Синхронизация с базой данных ТЕХНО-МАРКЕТ...
-        </div>
+        <div className="catalog-message" role="status">Загружаем товары…</div>
       ) : filteredProducts.length === 0 ? (
-        <div style={styles.notFound}>
-          😢 К сожалению, ничего не найдено по запросу «{searchQuery}»
-        </div>
+        <div className="catalog-message">По вашему запросу товары не найдены.</div>
       ) : (
-        <div style={styles.grid}>
-          {filteredProducts.map((product) => {
-            const cardProduct = {
-              id: product._id,
-              name: product.name,
-              price: product.price,
-              image: product.image || 'https://placeholder.com',
-              discount: product.discount, // Просто прокидываем процент дальше в карточку
-            };
-            
-            return <ProductCard key={product._id} product={cardProduct} />;
-          })}
+        <div className="product-grid">
+          {filteredProducts.map((product) => (
+            <ProductCard
+              key={product._id}
+              product={{
+                id: product._id,
+                name: product.name,
+                price: product.price,
+                image: product.image || 'https://placeholder.com',
+                discount: product.discount,
+              }}
+            />
+          ))}
         </div>
       )}
-    </div>
+    </section>
   );
-};
-
-const styles = {
-  container: {
-    padding: '0px',
-    marginBottom: '40px',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    width: '100%',
-  },
-  loadingBox: {
-    textAlign: 'center' as const,
-    padding: '60px 0',
-    fontSize: '18px',
-    fontFamily: 'sans-serif',
-    color: '#4a5568',
-    fontWeight: 'bold'
-  },
-  searchContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    marginBottom: '24px',
-    width: '100%',
-  },
-  searchInput: {
-    width: '100%',
-    maxWidth: '500px',
-    padding: '12px 20px',
-    borderRadius: '30px',
-    backgroundColor: '#ffffff',
-    color: '#333333',
-    border: '1px solid #dcdfe6',
-    fontSize: '15px',
-    outline: 'none',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-    transition: 'all 0.2s ease',
-  },
-  filterBar: {
-    display: 'flex',
-    gap: '12px',
-    justifyContent: 'center',
-    flexWrap: 'wrap' as const,
-    marginBottom: '30px',
-    width: '100%',
-  },
-  filterButton: {
-    padding: '10px 20px',
-    borderRadius: '25px',
-    fontSize: '14px',
-    fontWeight: 'bold' as const,
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  },
-  grid: {
-    display: 'flex',
-    gap: '24px',
-    flexWrap: 'wrap' as const,
-    justifyContent: 'center',
-    width: '100%',
-  },
-  notFound: {
-    textAlign: 'center' as const,
-    color: '#666',
-    fontSize: '16px',
-    padding: '40px 0',
-    fontStyle: 'italic',
-  }
 };
